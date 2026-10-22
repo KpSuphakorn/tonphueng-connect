@@ -1,6 +1,7 @@
 import { hasValidSameOrigin } from "../../../../lib/auth";
 import { createServiceClient } from "../../../../lib/supabase";
-import { deleteStaffPhotos, filesFrom, formProfile, readStaffForm, StaffFormError, StaffPhotoUploadError, uploadStaffPhotos, validatePhotos } from "../../../../lib/staff";
+import { deleteStaffPhotos, formProfile, readStaffForm, readStagedStaffPhotos, StaffFormError, StaffPhotoUploadError, uploadStaffPhotos } from "../../../../lib/staff";
+import { claimStaffPhotoUploadSession, finishStaffPhotoUploadSession } from "../../../../lib/staff-photo-uploads";
 
 export const runtime = "nodejs";
 
@@ -25,11 +26,15 @@ export async function POST(request: Request) {
     return response(400, { error: "กรุณากรอกข้อมูลกิจการ อีเมล และรหัสผ่านให้ครบถ้วน" });
   }
 
+  const uploadSession = form.get("upload_session");
+  if (typeof uploadSession !== "string" || form.has("photos")) return response(400, { error: "กรุณาแนบรูปกิจการอย่างน้อย 1 รูป" });
+  const claimed = await claimStaffPhotoUploadSession(uploadSession, "registration", null);
+  if (!claimed) return response(400, { error: "ชุดอัปโหลดรูปหมดอายุหรือถูกใช้แล้ว กรุณาเลือกและอัปโหลดรูปใหม่" });
   let photos: Buffer[];
   try {
-    photos = await validatePhotos(filesFrom(form));
-    if (!photos.length) return response(400, { error: "กรุณาแนบรูปกิจการอย่างน้อย 1 รูป" });
+    photos = await readStagedStaffPhotos(claimed.staging_paths);
   } catch (error) {
+    await finishStaffPhotoUploadSession(claimed.id, "failed");
     return response(400, { error: error instanceof Error ? error.message : "รูปภาพไม่ถูกต้อง" });
   }
 
@@ -40,7 +45,10 @@ export async function POST(request: Request) {
   let serviceWriteAttempted = false;
   try {
     const { data: authData, error: authError } = await client.auth.admin.createUser({ email, password, email_confirm: true });
-    if (authError || !authData.user) return response(409, { error: "อีเมลนี้อาจมีบัญชีอยู่แล้ว หรือระบบสร้างบัญชีไม่สำเร็จ" });
+    if (authError || !authData.user) {
+      await finishStaffPhotoUploadSession(claimed.id, "failed");
+      return response(409, { error: "อีเมลนี้อาจมีบัญชีอยู่แล้ว หรือระบบสร้างบัญชีไม่สำเร็จ" });
+    }
     const createdAuthUserId = authData.user.id;
     authUserId = createdAuthUserId;
 
@@ -61,11 +69,13 @@ export async function POST(request: Request) {
     serviceWriteAttempted = true;
     const { error: serviceError } = await client.from("services").insert({ ...profile, account_id: createdAccountId, photo_paths: photoPaths });
     if (serviceError) throw new Error("Could not create business profile");
+    await finishStaffPhotoUploadSession(claimed.id, "completed");
     return response(201, { status: "pending", message: "ส่งข้อมูลแล้ว บัญชีของคุณกำลังรอผู้ดูแลตรวจสอบ" });
   } catch {
     if (serviceWriteAttempted) {
       const reference = accountId ?? authUserId ?? crypto.randomUUID();
       console.error("Staff registration outcome uncertain", { reference, accountId: accountId ?? null, authUserId: authUserId ?? null, photoPaths });
+      await finishStaffPhotoUploadSession(claimed.id, "completed");
       return response(503, {
         error: `ระบบยืนยันผลการสมัครไม่ได้ กรุณาติดต่อ Admin พร้อมรหัสอ้างอิง ${reference} และอย่าสมัครซ้ำก่อนตรวจสอบ`,
         verify_required: true,
@@ -73,6 +83,7 @@ export async function POST(request: Request) {
       });
     }
     const failures: string[] = [];
+    await finishStaffPhotoUploadSession(claimed.id, "failed");
     try { await deleteStaffPhotos(photoPaths); } catch { failures.push("storage_cleanup_failed"); }
     if (authUserId) {
       try {

@@ -53,7 +53,11 @@ export default async function HomePage() {
           <p>ข้อมูลจะแสดงเมื่อผู้ดูแลและผู้ประกอบการเพิ่มรายการ</p>
         </div>
         <div className="cards">
-          {offers.map((offer) => (
+          {offers.map((offer) => offer.number === "03" ? (
+            <Link className="feature-card feature-card-link" href="/services" key={offer.number}>
+              <span className="feature-mark" aria-hidden="true">{offer.number}</span><span className="feature-card-copy"><span className="feature-card-title">{offer.title}</span><span>{offer.description}</span><span className="availability">เลือกดูบริการ</span></span>
+            </Link>
+          ) : (
             <details className="feature-card" key={offer.number}>
               <summary>
                 <span className="feature-mark" aria-hidden="true">{offer.number}</span>

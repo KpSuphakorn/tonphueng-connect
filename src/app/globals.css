@@ -106,6 +106,27 @@ h3 { margin-bottom: 7px; font-size: 18px; }
 .staff-profile-card, .applicant-card { margin-top: 22px; border: 1px solid var(--line); border-radius: 20px; padding: clamp(18px, 4vw, 28px); background: white; box-shadow: var(--shadow); }
 .business-photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin: 16px 0; }
 .business-photos img { display: block; width: 100%; aspect-ratio: 4 / 3; border: 1px solid var(--line); border-radius: 12px; object-fit: cover; }
+.service-filters { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(220px, 1fr); align-items: end; gap: 16px; margin-bottom: 18px; }
+.service-filters .form-help { margin: 8px 0 0; }
+.service-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 14px; margin: 16px 0; }
+.service-card { overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: white; box-shadow: var(--shadow); }
+.service-card > a { display: block; }
+.service-card img, .service-gallery > img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: var(--mint); }
+.service-image-placeholder { display: grid; min-height: 180px; place-items: center; background: var(--mint); color: var(--green-dark); font-weight: 750; }
+.service-card-copy { padding: 14px; }
+.service-card-copy h2 { margin: 8px 0 4px; font-size: 19px; }
+.service-card-copy p { margin: 0; color: var(--muted); line-height: 1.6; }
+.feature-card-link { display: flex; gap: 13px; color: inherit; }
+.feature-card-link:hover { border-color: var(--green); }
+.service-gallery { max-width: 720px; margin: 18px 0; overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: white; }
+.service-gallery > img, .service-gallery .service-image-placeholder { aspect-ratio: 4 / 3; max-height: 540px; }
+.gallery-controls { display: flex; min-height: 60px; align-items: center; justify-content: space-between; gap: 8px; padding: 8px; }
+.gallery-controls .button { min-height: 44px; padding: 0 12px; }
+.service-detail-copy { max-width: 720px; margin: 22px 0; border: 1px solid var(--line); border-radius: 18px; padding: 20px; background: white; line-height: 1.7; }
+.service-detail-copy p { color: var(--muted); white-space: pre-wrap; }
+.text-link { color: var(--green-dark); font-weight: 750; text-decoration: underline; text-underline-offset: 3px; }
+.text-button { border: 0; padding: 4px; background: transparent; color: inherit; font-weight: 750; text-decoration: underline; cursor: pointer; }
+.service-card > .button { margin: 0 14px 14px; width: calc(100% - 28px); }
 .approval-list { display: grid; gap: 14px; }
 .applicant-card { margin: 0; }
 .applicant-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
@@ -133,6 +154,7 @@ h3 { margin-bottom: 7px; font-size: 18px; }
   .section-heading p { margin-top: 4px; }
   .login-shell { padding-top: 18px; }
   .coordinate-fields { grid-template-columns: 1fr; }
+  .service-filters { grid-template-columns: 1fr; }
   .applicant-heading { align-items: stretch; flex-direction: column; }
   .applicant-heading .button { width: 100%; }
 }

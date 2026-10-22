@@ -4,11 +4,16 @@ import sharp from "sharp";
 import { expect, test } from "@playwright/test";
 
 const admin = { id: "11111111-1111-4111-8111-111111111111", role: "admin", status: "active", line_subject: "U_admin", auth_user_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", created_at: "2026-01-01T00:00:00.000Z" };
-const accounts = new Map<string, Record<string, unknown>>([[admin.id, admin]]);
+const customerA = { id: "66666666-6666-4666-8666-666666666666", role: "customer", status: "active", line_subject: "U_customer", auth_user_id: null };
+const customerB = { id: "77777777-7777-4777-8777-777777777777", role: "customer", status: "active", line_subject: "U_customer_b", auth_user_id: null };
+const accounts = new Map<string, Record<string, unknown>>([[admin.id, admin], [customerA.id, customerA], [customerB.id, customerB]]);
 const users = new Map<string, { id: string; email: string; password: string }>([[admin.auth_user_id, { id: admin.auth_user_id, email: "owner@example.test", password: "admin-password" }]]);
 const sessions = new Map<string, string>();
 const profiles = new Map<string, Record<string, unknown>>();
+const savedServices = new Map<string, Set<string>>();
 const objects = new Set<string>();
+const stagedObjects = new Map<string, Buffer>();
+const uploadSessions = new Map<string, { id: string; tokenHash: string; flow: string; accountId: string | null; paths: string[]; state: string }>();
 let fakeWebp: Buffer;
 
 async function bodyOf(request: IncomingMessage) {
@@ -26,6 +31,16 @@ const fakeSupabase = createServer(async (request, response) => {
   const url = new URL(request.url ?? "/", "http://127.0.0.1:4174");
   const body = await bodyOf(request);
   const json = () => body.length ? JSON.parse(body.toString("utf8")) as Record<string, unknown> : {};
+
+  if (request.method === "OPTIONS") {
+    response.writeHead(204, {
+      "access-control-allow-origin": "http://127.0.0.1:4173",
+      "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
+      "access-control-allow-headers": "authorization, apikey, content-type, x-upsert",
+      "access-control-max-age": "600",
+    });
+    return response.end();
+  }
 
   if (url.pathname === "/auth/v1/admin/users" && request.method === "POST") {
     const input = json();
@@ -64,6 +79,13 @@ const fakeSupabase = createServer(async (request, response) => {
       }));
       return send(response, 200, pending);
     }
+    if (url.searchParams.get("role") === "eq.staff" && url.searchParams.get("status") === "eq.active") {
+      return send(response, 200, [...accounts.values()].filter((account) => account.role === "staff" && account.status === "active").map(({ id }) => ({ id })));
+    }
+    if (url.searchParams.get("id")?.startsWith("eq.")) {
+      const account = accounts.get(url.searchParams.get("id")!.slice(3));
+      return send(response, 200, account?.role === "staff" && account.status === "active" ? { id: account.id } : null);
+    }
     const authUser = url.searchParams.get("auth_user_id")?.slice(3);
     const account = [...accounts.values()].find((item) => item.auth_user_id === authUser);
     return send(response, 200, account ?? null);
@@ -85,6 +107,27 @@ const fakeSupabase = createServer(async (request, response) => {
     account.status = "active";
     return send(response, 200, [{ id: account.id, role: account.role, status: account.status }]);
   }
+  if (url.pathname === "/rest/v1/rpc/create_staff_photo_upload_session" && request.method === "POST") {
+    const input = json();
+    uploadSessions.set(input.target_id as string, {
+      id: input.target_id as string,
+      tokenHash: input.target_token_hash as string,
+      flow: input.target_flow as string,
+      accountId: input.target_account_id as string | null,
+      paths: input.target_staging_paths as string[],
+      state: "issued",
+    });
+    return send(response, 204);
+  }
+  if (url.pathname === "/rest/v1/rpc/claim_staff_photo_upload_session" && request.method === "POST") {
+    const input = json();
+    const session = [...uploadSessions.values()].find((item) => item.tokenHash === input.target_token_hash && item.flow === input.target_flow && item.accountId === (input.target_account_id as string | null) && item.state === "issued");
+    if (!session) return send(response, 200, []);
+    session.state = "claimed";
+    return send(response, 200, [{ id: session.id, staging_paths: session.paths, expires_at: "2999-01-01T00:00:00.000Z" }]);
+  }
+  if (url.pathname === "/rest/v1/staff_photo_upload_sessions" && request.method === "GET") return send(response, 200, []);
+  if (url.pathname === "/rest/v1/staff_photo_upload_sessions" && request.method === "PATCH") return send(response, 204);
   if (url.pathname === "/rest/v1/services" && request.method === "POST") {
     const input = json();
     const profile: Record<string, unknown> = { id: randomUUID(), ...input };
@@ -92,8 +135,19 @@ const fakeSupabase = createServer(async (request, response) => {
     return send(response, 201, profile);
   }
   if (url.pathname === "/rest/v1/services" && request.method === "GET") {
-    const accountId = url.searchParams.get("account_id")?.slice(3) ?? "";
-    return send(response, 200, profiles.get(accountId) ?? null);
+    const accountFilter = url.searchParams.get("account_id") ?? "";
+    const accountId = accountFilter.startsWith("eq.") ? accountFilter.slice(3) : "";
+    if (accountId) return send(response, 200, profiles.get(accountId) ?? null);
+    const accountList = accountFilter.match(/in\.\((.*)\)/)?.[1]?.split(",") ?? [...accounts.values()].filter((account) => account.role === "staff" && account.status === "active").map((account) => account.id as string);
+    const serviceFilter = url.searchParams.get("id") ?? "";
+    const serviceId = serviceFilter.startsWith("eq.") ? serviceFilter.slice(3) : "";
+    if (serviceId) return send(response, 200, [...profiles.values()].find((profile) => profile.id === serviceId && accounts.get(profile.account_id as string)?.status === "active") ?? null);
+    if (serviceFilter.startsWith("in.")) {
+      const ids = serviceFilter.slice(4, -1).split(",");
+      return send(response, 200, [...profiles.values()].filter((profile) => ids.includes(profile.id as string) && accountList.includes(profile.account_id as string)));
+    }
+    const category = url.searchParams.get("category")?.slice(3);
+    return send(response, 200, [...profiles.values()].filter((profile) => accountList.includes(profile.account_id as string) && (!category || profile.category === category)));
   }
   if (url.pathname === "/rest/v1/services" && request.method === "PATCH") {
     const accountId = url.searchParams.get("account_id")?.slice(3) ?? "";
@@ -101,6 +155,44 @@ const fakeSupabase = createServer(async (request, response) => {
     if (!profile) return send(response, 404, { message: "profile missing" });
     Object.assign(profile, json());
     return send(response, 204);
+  }
+  if (url.pathname === "/rest/v1/my_trip_saved_services" && request.method === "GET") {
+    const owner = url.searchParams.get("customer_account_id")?.slice(3) ?? "";
+    return send(response, 200, [...(savedServices.get(owner) ?? [])].map((service_id) => ({ service_id, created_at: "2026-10-23T00:00:00.000Z" })));
+  }
+  if (url.pathname === "/rest/v1/my_trip_saved_services" && request.method === "POST") {
+    const input = json();
+    const rows = savedServices.get(input.customer_account_id as string) ?? new Set<string>();
+    rows.add(input.service_id as string); savedServices.set(input.customer_account_id as string, rows);
+    return send(response, 201, []);
+  }
+  if (url.pathname === "/rest/v1/my_trip_saved_services" && request.method === "DELETE") {
+    const owner = url.searchParams.get("customer_account_id")?.slice(3) ?? "";
+    savedServices.get(owner)?.delete(url.searchParams.get("service_id")?.slice(3) ?? "");
+    return send(response, 204);
+  }
+  if (url.pathname.startsWith("/storage/v1/object/sign/staff-photo-staging/") && request.method === "POST") {
+    const path = decodeURIComponent(url.pathname.split("/storage/v1/object/sign/staff-photo-staging/")[1]);
+    return send(response, 200, { signedURL: `/object/sign/staff-photo-staging/${path}?token=local-test` });
+  }
+  if (url.pathname.startsWith("/storage/v1/object/sign/staff-photo-staging/") && request.method === "GET") {
+    const path = decodeURIComponent(url.pathname.split("/storage/v1/object/sign/staff-photo-staging/")[1]);
+    const bytes = stagedObjects.get(path);
+    return bytes ? send(response, 200, bytes, "application/octet-stream") : send(response, 404, { message: "object missing" });
+  }
+  if (url.pathname.startsWith("/storage/v1/object/upload/sign/staff-photo-staging/") && request.method === "POST") {
+    const path = decodeURIComponent(url.pathname.split("/storage/v1/object/upload/sign/staff-photo-staging/")[1]);
+    return send(response, 200, { url: `/object/upload/sign/staff-photo-staging/${path}?token=local-test` });
+  }
+  if (url.pathname.startsWith("/storage/v1/object/upload/sign/staff-photo-staging/") && request.method === "PUT") {
+    const path = decodeURIComponent(url.pathname.split("/storage/v1/object/upload/sign/staff-photo-staging/")[1]);
+    if (stagedObjects.has(path)) return send(response, 400, { message: "object already exists" });
+    stagedObjects.set(path, body);
+    return send(response, 200, { Key: path });
+  }
+  if (url.pathname === "/storage/v1/object/staff-photo-staging" && request.method === "DELETE") {
+    for (const path of (json().prefixes as string[] | undefined) ?? []) stagedObjects.delete(path);
+    return send(response, 200, { message: "ok" });
   }
   if (url.pathname.startsWith("/storage/v1/object/sign/") && request.method === "POST") {
     const input = json();
@@ -123,6 +215,8 @@ test.beforeAll(async () => {
   await new Promise<void>((resolve) => fakeSupabase.listen(4174, "127.0.0.1", resolve));
   const tokenHash = createHash("sha256").update("admin-seeded-session").digest("hex");
   sessions.set(tokenHash, admin.id);
+  sessions.set(createHash("sha256").update("customer-seeded-session").digest("hex"), customerA.id);
+  sessions.set(createHash("sha256").update("customer-b-seeded-session").digest("hex"), customerB.id);
 });
 
 test.afterAll(async () => {
@@ -131,6 +225,10 @@ test.afterAll(async () => {
 
 test("Staff can register, wait for Admin approval, edit their own profile, and reload the saved result", async ({ page, context }) => {
   const screenshotDir = process.env.STAFF_APPROVAL_SCREENSHOT_DIR;
+  let registrationBodySize = 0;
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname === "/api/staff/register" && request.method() === "POST") registrationBodySize = request.postDataBuffer()?.byteLength ?? 0;
+  });
   if (screenshotDir) await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/staff/register");
   if (screenshotDir) await page.screenshot({ path: `${screenshotDir}/tonphueng-staff-register-mobile.png`, fullPage: true });
@@ -143,6 +241,8 @@ test("Staff can register, wait for Admin approval, edit their own profile, and r
   await page.getByLabel("รหัสผ่าน").fill("staff-password-123");
   await page.getByLabel("รูปกิจการ (1–19 รูป)").setInputFiles({ name: "shop.png", mimeType: "image/png", buffer: await sharp({ create: { width: 2, height: 2, channels: 3, background: "#ffffff" } }).png().toBuffer() });
   await page.getByRole("button", { name: "ส่งข้อมูลสมัคร" }).click();
+  await expect.poll(() => registrationBodySize).toBeGreaterThan(0);
+  expect(registrationBodySize).toBeLessThan(64 * 1024);
   await expect(page.getByRole("heading", { name: "ส่งข้อมูลเรียบร้อยแล้ว" })).toBeVisible();
   await expect(page.getByText("กำลังรอผู้ดูแลตรวจสอบ")).toBeVisible();
 
@@ -178,4 +278,48 @@ test("Staff can register, wait for Admin approval, edit their own profile, and r
   await expect(page.getByLabel("ชื่อกิจการ")).toHaveValue("กลุ่มผ้าทอชุมชนรุ่นใหม่");
   await page.reload();
   await expect(page.getByLabel("ชื่อกิจการ")).toHaveValue("กลุ่มผ้าทอชุมชนรุ่นใหม่");
+
+  await page.getByLabel("รายละเอียดกิจการ").fill("ผ้าทอมือจากชุมชนบ้านต้นผึ้ง");
+  const descriptionSave = page.waitForResponse((response) => response.url().endsWith("/api/staff/profile"));
+  const descriptionReload = page.waitForResponse((response) => new URL(response.url()).pathname === "/staff" && response.request().method() === "GET");
+  await page.getByRole("button", { name: "บันทึกข้อมูลกิจการ" }).click();
+  expect((await descriptionSave).status()).toBe(200);
+  expect((await descriptionReload).status()).toBe(200);
+  await expect(page.getByLabel("รายละเอียดกิจการ")).toHaveValue("ผ้าทอมือจากชุมชนบ้านต้นผึ้ง");
+  await page.getByLabel("เปลี่ยนรูปกิจการ (ไม่เกิน 19 รูป)").setInputFiles({ name: "replacement.png", mimeType: "image/png", buffer: await sharp({ create: { width: 2, height: 2, channels: 3, background: "#ca7b52" } }).png().toBuffer() });
+  const photoSave = page.waitForResponse((response) => response.url().endsWith("/api/staff/profile"));
+  await page.getByRole("button", { name: "บันทึกข้อมูลกิจการ" }).click();
+  expect((await photoSave).status()).toBe(200);
+  await expect(page.getByAltText("รูปกิจการ 1")).toBeVisible();
+  await context.addCookies([{ name: "tonphueng_session", value: "customer-seeded-session", url: "http://127.0.0.1:4173" }]);
+  await page.goto("/services");
+  await expect(page.getByRole("heading", { name: "กลุ่มผ้าทอชุมชนรุ่นใหม่" })).toBeVisible();
+  await page.route("**/api/services?**category=accommodation**", async (route) => {
+    await page.waitForTimeout(300);
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ services: [{ id: "88888888-8888-4888-8888-888888888888", name: "ผลลัพธ์เก่าจากตัวกรอง", description: "", address: "", latitude: 0, longitude: 0, phone: "", category: "accommodation", other_category: null, photos: [] }], hasMore: false, limit: 12 }) });
+  });
+  await page.getByLabel("ประเภทบริการ").selectOption("accommodation");
+  await page.getByLabel("ประเภทบริการ").selectOption("tourism_trail");
+  await expect(page.getByText("ยังไม่มีบริการในหมวดนี้")).toBeVisible();
+  await page.waitForTimeout(350);
+  await expect(page.getByText("ผลลัพธ์เก่าจากตัวกรอง")).toHaveCount(0);
+  await page.unrouteAll({ behavior: "wait" });
+  await page.getByLabel("ประเภทบริการ").selectOption("all");
+  await expect(page.getByRole("heading", { name: "กลุ่มผ้าทอชุมชนรุ่นใหม่" })).toBeVisible();
+  await page.getByRole("button", { name: "เรียงตามระยะใกล้" }).click();
+  await expect(page.getByText(/ไม่ได้รับตำแหน่ง/)).toBeVisible();
+  await context.grantPermissions(["geolocation"]);
+  await context.setGeolocation({ latitude: 18.8, longitude: 98.9 });
+  await page.getByRole("button", { name: "เรียงตามระยะใกล้" }).click();
+  await expect(page.getByText(/เรียงตามระยะเส้นตรง/)).toBeVisible();
+  await page.getByRole("link", { name: /กลุ่มผ้าทอชุมชนรุ่นใหม่/ }).click();
+  await expect(page.getByText("ผ้าทอมือจากชุมชนบ้านต้นผึ้ง")).toBeVisible();
+  await expect(page.getByRole("link", { name: "เปิดพิกัดใน Google Maps" })).toHaveAttribute("href", /google\.com\/maps\/search/);
+  await page.getByRole("button", { name: "บันทึกเข้า My Trip" }).click();
+  await expect(page.getByRole("status")).toContainText("บันทึกเข้า My Trip แล้ว");
+  await page.goto("/my-trip");
+  await expect(page.getByText("สถานที่ที่บันทึกเอง · ยังไม่มีการจองจากแพ็กเกจ")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "กลุ่มผ้าทอชุมชนรุ่นใหม่" })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "กลุ่มผ้าทอชุมชนรุ่นใหม่" })).toBeVisible();
 });

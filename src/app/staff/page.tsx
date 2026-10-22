@@ -23,7 +23,7 @@ export default async function StaffPage() {
   }
 
   const { data: profile, error } = await createServiceClient().from("services")
-    .select("id,account_id,name,address,latitude,longitude,phone,category,other_category,photo_paths")
+    .select("id,account_id,name,description,address,latitude,longitude,phone,category,other_category,photo_paths")
     .eq("account_id", account.id)
     .maybeSingle();
   const details = profile && !error ? await getStaffDetails(profile as StaffProfile) : null;

@@ -4,7 +4,7 @@
 
 **Blocked by:** 02: สมัคร Staff -> Admin อนุมัติ -> เข้าใช้งาน.
 
-**Status:** ready-for-agent
+**Status:** implementation-complete-awaiting-live-acceptance
 
 **Spec:** [Approved spec](../spec.md)
 
@@ -26,3 +26,10 @@
 
 - ใช้ข้อมูลกิจการ รูป คำอธิบาย และพิกัดเดโมตามนโยบาย prototype ใน spec ได้ โดยระบุว่าเป็นตัวอย่าง ไม่อ้างการรับรองบริการหรือสิทธิใช้เส้นทางจริง
 - เก็บหลักฐานรายการที่เปลี่ยนตามข้อมูล Staff และ My Trip ที่อ่านกลับมาได้
+
+## Comments
+
+- 2026-10-23: Local implementation and checks completed: 25 Vitest tests, 4 Playwright tests, typecheck, production build, and diff check passed. Browser coverage extends the Staff-to-Customer flow through details, GPS denial/allowance, delayed filter changes, saving, and My Trip reload. Migration 003 remains local; real Supabase/LINE and hosted acceptance are pending. The acceptance criteria above are unchanged and await live acceptance. See [validation evidence](../../../agent-runs/03-service-discovery/test-report.md). No Ticket 03 commit, push, deployment, or external seed was made.
+- 2026-10-23: Fresh independent review passed Standards and Spec without blocking findings; no source corrections were needed. Local approval does not replace real Supabase/LINE/hosted acceptance, and migration 003 remains unapplied.
+
+- 2026-10-23: User-authorized migration 003 applied manually in a transaction to the intended Supabase project. Verified the description constraint, saved-place composite primary key, foreign keys, RLS and denied browser-role access. No demo data was seeded. Live Supabase/LINE/hosted application acceptance remains pending; status stays `implementation-complete-awaiting-live-acceptance`.

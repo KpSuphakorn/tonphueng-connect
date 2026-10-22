@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { uploadStaffPhotosDirectly } from "./photo-upload";
 import type { StaffDetails } from "../../lib/staff";
 
 const categories = [
@@ -21,11 +22,17 @@ export function StaffProfileForm({ profile }: { profile: StaffDetails }) {
     setBusy(true);
     setMessage("");
     try {
+      const form = event.currentTarget;
+      const fileInput = form.elements.namedItem("photos") as HTMLInputElement;
+      const uploadSession = await uploadStaffPhotosDirectly(Array.from(fileInput.files ?? []), "profile");
+      const body = new FormData(form);
+      body.delete("photos");
+      if (uploadSession) body.set("upload_session", uploadSession);
       const response = await fetch("/api/staff/profile", {
         method: "POST",
         credentials: "same-origin",
         cache: "no-store",
-        body: new FormData(event.currentTarget),
+        body,
       });
       const result = (await response.json()) as { error?: string; message?: string };
       if (!response.ok) throw new Error(result.error || "บันทึกข้อมูลไม่สำเร็จ");
@@ -45,6 +52,7 @@ export function StaffProfileForm({ profile }: { profile: StaffDetails }) {
       </div>}
       <form className="form-stack" onSubmit={save}>
         <label className="field">ชื่อกิจการ<input name="name" required maxLength={160} defaultValue={profile.name} /></label>
+        <label className="field">รายละเอียดกิจการ<textarea name="description" maxLength={4000} defaultValue={profile.description} /></label>
         <label className="field">ที่อยู่<textarea name="address" required maxLength={1000} defaultValue={profile.address} /></label>
         <div className="coordinate-fields">
           <label className="field">ละติจูด<input type="number" name="latitude" required min={-90} max={90} step="any" defaultValue={profile.latitude} /></label>

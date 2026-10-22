@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { uploadStaffPhotosDirectly } from "../photo-upload";
 
 const categories = [
   ["community_product", "สินค้าชุมชน"],
@@ -27,11 +28,16 @@ export function RegisterForm() {
     setBusy(true);
     setMessage("");
     try {
+      const files = Array.from(fileInput.files ?? []);
+      const uploadSession = await uploadStaffPhotosDirectly(files, "registration");
+      const body = new FormData(form);
+      body.delete("photos");
+      if (uploadSession) body.set("upload_session", uploadSession);
       const response = await fetch("/api/staff/register", {
         method: "POST",
         credentials: "same-origin",
         cache: "no-store",
-        body: new FormData(form),
+        body,
       });
       const result = (await response.json()) as { error?: string; message?: string };
       if (!response.ok) throw new Error(result.error || "สมัครไม่สำเร็จ");

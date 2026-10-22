@@ -8,7 +8,7 @@ const MAX_PHOTO_COUNT = 19;
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 const MAX_TOTAL_PHOTO_BYTES = 25 * 1024 * 1024;
 const MAX_IMAGE_PIXELS = 40_000_000;
-const MAX_FORM_BYTES = 27 * 1024 * 1024;
+const MAX_FORM_BYTES = 64 * 1024;
 
 export class StaffFormError extends Error {
   constructor(readonly status: number, message: string) {
@@ -58,6 +58,7 @@ export type StaffProfile = {
   id: string;
   account_id: string;
   name: string;
+  description: string;
   address: string;
   latitude: number;
   longitude: number;
@@ -71,6 +72,7 @@ export type StaffDetails = Omit<StaffProfile, "photo_paths"> & { photos: string[
 
 export function formProfile(form: FormData) {
   const name = form.get("name");
+  const description = form.get("description");
   const address = form.get("address");
   const rawLatitude = form.get("latitude");
   const rawLongitude = form.get("longitude");
@@ -81,6 +83,7 @@ export function formProfile(form: FormData) {
   const otherCategory = form.get("other_category");
   if (
     typeof name !== "string" || !name.trim() || name.trim().length > 160 ||
+    (description !== null && (typeof description !== "string" || description.length > 4000)) ||
     typeof address !== "string" || !address.trim() || address.trim().length > 1000 ||
     !Number.isFinite(latitude) || latitude < -90 || latitude > 90 ||
     !Number.isFinite(longitude) || longitude < -180 || longitude > 180 ||
@@ -90,6 +93,7 @@ export function formProfile(form: FormData) {
   ) return null;
   return {
     name: name.trim(),
+    description: typeof description === "string" ? description.trim() : "",
     address: address.trim(),
     latitude,
     longitude,
@@ -99,19 +103,15 @@ export function formProfile(form: FormData) {
   };
 }
 
-export async function validatePhotos(files: FormDataEntryValue[]) {
-  const photos = files.filter((file): file is File => file instanceof File && file.size > 0);
-  if (files.some((file) => !(file instanceof File) || (file.size === 0 && file.name !== "")) || photos.length > MAX_PHOTO_COUNT) {
-    throw new Error("กรุณาแนบรูปภาพที่ไม่ว่างและไม่เกิน 19 รูป");
-  }
+export async function validatePhotoBuffers(inputs: Buffer[]) {
+  if (inputs.length > MAX_PHOTO_COUNT) throw new Error("กรุณาแนบรูปภาพไม่เกิน 19 รูป");
   let totalBytes = 0;
   const result: Buffer[] = [];
-  for (const file of photos) {
-    if (file.size > MAX_PHOTO_BYTES) throw new Error("รูปภาพแต่ละไฟล์ต้องมีขนาดไม่เกิน 5 MB");
-    totalBytes += file.size;
+  for (const input of inputs) {
+    if (!input.length || input.length > MAX_PHOTO_BYTES) throw new Error("รูปภาพแต่ละไฟล์ต้องมีขนาดไม่เกิน 5 MB");
+    totalBytes += input.length;
     if (totalBytes > MAX_TOTAL_PHOTO_BYTES) throw new Error("รูปภาพทั้งหมดต้องมีขนาดรวมไม่เกิน 25 MB");
     try {
-      const input = Buffer.from(await file.arrayBuffer());
       const image = sharp(input, { failOn: "error", limitInputPixels: MAX_IMAGE_PIXELS });
       const metadata = await image.metadata();
       if (!metadata.width || !metadata.height || metadata.width * metadata.height > MAX_IMAGE_PIXELS || !["jpeg", "png", "webp"].includes(metadata.format ?? "")) {
@@ -125,8 +125,38 @@ export async function validatePhotos(files: FormDataEntryValue[]) {
   return result;
 }
 
-export function filesFrom(form: FormData) {
-  return form.getAll("photos");
+export async function readStagedStaffPhotos(paths: string[]) {
+  if (!paths.length || paths.length > MAX_PHOTO_COUNT) throw new Error("กรุณาแนบรูปกิจการ 1–19 รูป");
+  const client = createServiceClient();
+  const buffers: Buffer[] = [];
+  let total = 0;
+  for (const path of paths) {
+    const { data, error } = await client.storage.from("staff-photo-staging").createSignedUrl(path, 60);
+    if (error || !data?.signedUrl) throw new Error("Could not read staged business photo");
+    const response = await fetch(data.signedUrl, { cache: "no-store", redirect: "error" });
+    if (!response.ok || !response.body) throw new Error("Could not read staged business photo");
+    const reader = response.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        size += value.byteLength;
+        total += value.byteLength;
+        if (size > MAX_PHOTO_BYTES || total > MAX_TOTAL_PHOTO_BYTES) {
+          await reader.cancel();
+          throw new Error(size > MAX_PHOTO_BYTES ? "รูปภาพแต่ละไฟล์ต้องมีขนาดไม่เกิน 5 MB" : "รูปภาพทั้งหมดต้องมีขนาดรวมไม่เกิน 25 MB");
+        }
+        chunks.push(value);
+      }
+    } finally {
+      reader.releaseLock();
+    }
+    if (!size) throw new Error("รูปภาพไม่ถูกต้อง");
+    buffers.push(Buffer.concat(chunks, size));
+  }
+  return validatePhotoBuffers(buffers);
 }
 
 export async function requireStaff(request: Request): Promise<Account | null> {

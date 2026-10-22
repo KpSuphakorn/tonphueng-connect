@@ -23,7 +23,7 @@ Next.js และ TypeScript แอปเดียว ใช้ Supabase Auth, P
 | Staff | อีเมล/รหัสผ่านผ่าน Supabase Auth; สถานะ `pending` หรือ `disabled` ไม่ได้รับสิทธิ์ Staff |
 | Admin | อีเมล/รหัสผ่านร่วมกับ LINE ที่ตรวจแล้ว; Admin เริ่มต้นผูก LINE ครั้งแรกได้ครั้งเดียว และครั้งต่อไปต้องตรงบัญชี |
 | Session/logout | cookie แบบ HttpOnly; ฐานข้อมูลเก็บ hash ของ token อายุ 14 วัน; logout เพิกถอน session |
-| หน้าลูกค้า | `/`, `/my-trip`, `/my-order` มีโครงหน้าและสถานะว่าง ส่วนรายการสินค้า/ทริปยังไม่พัฒนา |
+| หน้าลูกค้า | `/services` ค้นหาและบันทึกสถานที่ได้; `/my-trip` แสดงรายการที่บันทึกเอง; `/my-order` ยังเป็นสถานะว่าง |
 
 จุดเข้า: `/login`, `POST /api/auth/line`, `POST /api/auth/password`, `POST /api/auth/logout` และพื้นที่ `/staff`, `/admin`
 
@@ -44,20 +44,20 @@ Next.js และ TypeScript แอปเดียว ใช้ Supabase Auth, P
 
 หมวด: สินค้าชุมชน ที่พัก ร้านอาหาร การท่องเที่ยว/เส้นทางเดินป่า และอื่น ๆ พร้อมข้อความระบุ
 
-รูปสมัครต้องมี 1–19 รูป JPG/PNG/WebP ที่ server อ่านได้ ขนาดไม่เกิน 5 MiB ต่อไฟล์ รวมไม่เกิน 25 MiB; multipart จำกัดข้อมูลที่รับจริง 27 MiB รูปถูกปรับเป็น WebP เก็บใน private bucket และแสดงผ่าน signed URL การแก้โปรไฟล์ที่ไม่ส่งรูปใหม่เก็บรูปเดิมไว้
+รูปสมัครต้องมี 1–19 รูป JPG/PNG/WebP ที่ server อ่านได้ ขนาดจริงไม่เกิน 5 MiB ต่อไฟล์ รวมไม่เกิน 25 MiB; เบราว์เซอร์อัปโหลด binary ไป private staging bucket ด้วย signed URL ที่จำกัดต่อ path ส่วน Vercel รับเฉพาะ metadata ขนาดเล็กและ session token เซิร์ฟเวอร์อ่าน/ตรวจรูปจริงแล้วปรับเป็น WebP ลง private canonical bucket การแก้โปรไฟล์ที่ไม่ส่งรูปใหม่เก็บรูปเดิมไว้; final photo paths จะถูกแทนที่หลัง PATCH สำเร็จเท่านั้น
 
 โค้ดหลัก: [`staff.ts`](../src/lib/staff.ts), [`Staff pages`](../src/app/staff/), [`Admin pages`](../src/app/admin/) และ [`Staff APIs`](../src/app/api/staff/)
 
-ข้อมูล: Auth เก็บอีเมล/รหัสผ่าน; `services.account_id` ผูกกิจการกับ `app_accounts` แบบหนึ่งต่อหนึ่ง สถานะอนุมัติอยู่ใน `app_accounts` ชุดเดียว [migration 002](../supabase/migrations/202610220002_staff_approval.sql) กำหนดตาราง `services`, private bucket `staff-business-photos` และ `approve_staff_account`
+ข้อมูล: Auth เก็บอีเมล/รหัสผ่าน; `services.account_id` ผูกกิจการกับ `app_accounts` แบบหนึ่งต่อหนึ่ง สถานะอนุมัติอยู่ใน `app_accounts` ชุดเดียว [migration 002](../supabase/migrations/202610220002_staff_approval.sql) กำหนดตาราง `services`, private bucket `staff-business-photos` และ `approve_staff_account`; [migration 004](../supabase/migrations/202610230004_staff_photo_uploads.sql) เพิ่ม private staging bucket, hashed capability sessions และ atomic one-use claim โดย service role เท่านั้น
 
 เมื่อยืนยันผลการเขียนไม่ได้ ระบบคืน `verify_required` และรักษาบัญชี/รูปที่อาจบันทึกแล้ว เมื่อ cleanup ก่อนเขียนกิจการล้มเหลว ระบบคืน `cleanup_required` พร้อมเลขอ้างอิง การตรวจสถานะและกู้คืนด้วยผู้ดูแลอยู่ใน [setup](setup.md)
 
-สถานะ: implementation และ local review ผ่าน; migration 002 ใช้กับโครงการจริงแล้ว แต่การทดสอบ Auth/Storage และขั้นสมัคร-อนุมัติด้วยข้อมูลจริงยังค้าง ดู [ticket 02](../.scratch/tonphueng-connect/issues/02-staff-approval.md) และ [ผลทดสอบ](../agent-runs/02-staff-approval/test-report.md)
+สถานะ: migration 002 และ 004 ใช้กับโครงการจริงแล้ว; ตรวจ private bucket, RLS/grants และ PostgreSQL claim/owner/flow/expiry/quota โดย rollback ข้อมูลทดสอบแล้ว การตรวจรูป/การสมัคร/การแก้โปรไฟล์ผ่าน local HTTP doubles และ browser flow; independent review ผ่าน Standards/Spec แต่ real Auth/Storage, CORS, hosted Vercel และ LINE acceptance ยัง pending. Upload preparation is rate-limited to 25 anonymous registration sessions per two hours globally and 5 per Staff account per two hours; expired staging is cleaned in bounded batches only when a later upload is prepared. See [ticket 02](../.scratch/tonphueng-connect/issues/02-staff-approval.md), [setup and recovery guidance](setup.md), and [validation report](../agent-runs/02-staff-approval/test-report.md).
 
 ## งานที่ยังไม่พัฒนา
 
-งานหลักที่เหลือคือ Tickets 03–08: discovery/My Trip, แพ็กเกจ/Booking, สินค้า/Order และเชิญ Admin ส่วน Ticket 09 (AI chat) และ 10 (Feedback) เป็น optional ทำเมื่อมีเวลา รายละเอียดอยู่ใน [tickets เดิม](../.scratch/tonphueng-connect/issues/)
+งานหลักที่เหลือคือ Tickets 04–08: แพ็กเกจ/Booking, สินค้า/Order และเชิญ Admin ส่วน Ticket 09 (AI chat) และ 10 (Feedback) เป็น optional ทำเมื่อมีเวลา รายละเอียดอยู่ใน [tickets เดิม](../.scratch/tonphueng-connect/issues/)
 
-Service List ใน Ticket 03 วางแผน `GET /api/services?category=...` สำหรับกิจการ/สถานที่ตามหมวดในสเปก รวมร้านสินค้าชุมชน endpoint นี้ยังไม่ได้ implement และไม่มีการแก้เว็บเดิม
+Ticket 03 เพิ่ม `GET /api/services?category=...` พร้อม filter, offset pagination, optional GPS distance ordering, detail/gallery, and customer-owned My Trip saves. Omitting `category` shows all categories; an invalid supplied value returns 400. List and detail expose only services owned by active Staff. GPS ordering loads the filtered catalogue before slicing so each page follows one global distance order; move this sort into Postgres if the catalogue grows substantially. Migration 003 adds the Service description and private saved-service relation; it was applied to the connected Supabase project on 2026-10-23 with schema and access checks verified. Live application acceptance remains pending. Local checks and remaining acceptance are recorded in the [Ticket 03 report](../agent-runs/03-service-discovery/test-report.md).
 
 ข้อมูลธุรกิจที่ยังขาดใช้ข้อมูลเดโมที่ระบุชัดเจนได้ ระบบบันทึกและตรวจสิทธิ์ยังทำงานจริง การตั้งค่า/การอนุญาตบริการภายนอกยังค้างตาม [ตารางของ spec](../.scratch/tonphueng-connect/spec.md#ข้อมูลและการตั้งค่าที่ยังรอ)

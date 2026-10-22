@@ -29,10 +29,19 @@ function jsonRequest(url: string, body: unknown, token: string, origin = "http:/
 }
 
 function multipartRequest(url: string, form: FormData, token?: string) {
+  const photos = form.getAll("photos").filter((entry): entry is File => entry instanceof File);
+  if (photos.length) {
+    stagedPhotoFiles = photos;
+    form.delete("photos");
+    form.set("upload_session", "unit-test-session-token-12345678901234567890");
+  } else stagedPhotoFiles = [];
   const headers = new Headers({ origin: "http://localhost:3000" });
   if (token) headers.set("cookie", `tonphueng_session=${token}`);
   return new Request(`http://localhost:3000${url}`, { method: "POST", headers, body: form });
 }
+
+let stagedPhotoFiles: File[] = [];
+let claimedPhotoSessions = new Set<string>();
 
 function registrationForm({ photo }: { photo?: File } = {}) {
   const form = new FormData();
@@ -63,6 +72,7 @@ function installBoundary(options: {
   vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "service-test-key");
   vi.stubEnv("APP_ORIGIN", "http://localhost:3000");
   const calls: Array<{ url: URL; method: string; body: string; headers: Headers }> = [];
+  claimedPhotoSessions = new Set();
   vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(input instanceof Request ? input.url : String(input));
     const method = init?.method ?? "GET";
@@ -88,6 +98,24 @@ function installBoundary(options: {
       return Response.json({ expires_at: "2999-01-01T00:00:00.000Z", app_accounts: account });
     }
     if (url.pathname === "/rest/v1/rpc/approve_staff_account") return Response.json([{ id: staffAccount.id, role: "staff", status: "active" }]);
+    if (url.pathname === "/rest/v1/rpc/claim_staff_photo_upload_session") {
+      const input = JSON.parse(body) as { target_token_hash: string; target_flow: string; target_account_id: string | null };
+      const expectedHash = createHash("sha256").update("unit-test-session-token-12345678901234567890").digest("hex");
+      if (input.target_token_hash !== expectedHash || claimedPhotoSessions.has(input.target_token_hash) ||
+        (input.target_flow === "registration" ? input.target_account_id !== null : input.target_flow !== "profile" || input.target_account_id !== staffAccount.id)) return Response.json([]);
+      claimedPhotoSessions.add(input.target_token_hash);
+      const paths = stagedPhotoFiles.map((_, index) => `99999999-9999-4999-8999-999999999999/${index + 1}-photo.upload`);
+      return Response.json(paths.length ? [{ id: "99999999-9999-4999-8999-999999999999", staging_paths: paths, expires_at: "2999-01-01T00:00:00.000Z" }] : []);
+    }
+    if (url.pathname.startsWith("/storage/v1/object/sign/staff-photo-staging/") && method === "POST") {
+      return Response.json({ signedURL: `${url.pathname.replace("/storage/v1", "")}?token=local-stage-token` });
+    }
+    if (url.pathname.startsWith("/storage/v1/object/sign/staff-photo-staging/") && method === "GET") {
+      const index = Number(url.pathname.split("/").at(-1)?.split("-")[0]) - 1;
+      const file = stagedPhotoFiles[index];
+      return file ? new Response(await file.arrayBuffer()) : new Response(null, { status: 404 });
+    }
+    if (url.pathname === "/rest/v1/staff_photo_upload_sessions" && method === "PATCH") return new Response(null, { status: 204 });
     if (url.pathname === "/rest/v1/services" && method === "POST") {
       if (options.serviceInsertGateway502AfterCommit) {
         const inserted = JSON.parse(body) as { photo_paths: string[] };
@@ -153,6 +181,16 @@ describe("Staff registration and approval HTTP behavior", () => {
     expect(serviceInsert!.body).not.toContain(adminAccount.id);
     expect(serviceInsert!.body).not.toContain("a-private-password");
     expect(calls.some((call) => call.url.pathname === "/auth/v1/admin/users" && call.method === "POST" && call.body.includes("a-private-password"))).toBe(true);
+  });
+
+  it("rejects a registration capability after its first atomic claim", async () => {
+    installBoundary();
+    const png = await sharp({ create: { width: 1, height: 1, channels: 3, background: "white" } }).png().toBuffer();
+    const form = () => registrationForm({ photo: new File([png], "shop.png", { type: "image/png" }) });
+    expect((await register(multipartRequest("/api/staff/register", form()))).status).toBe(201);
+    const replay = await register(multipartRequest("/api/staff/register", form()));
+    expect(replay.status).toBe(400);
+    expect((await replay.json()).error).toContain("ถูกใช้แล้ว");
   });
 
   it("rejects 20 photos, incomplete data, and bytes that are not a decodable supported image before creating an account", async () => {

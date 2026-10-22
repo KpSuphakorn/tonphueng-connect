@@ -3,6 +3,10 @@ import { createHash, randomUUID } from "node:crypto";
 import sharp from "sharp";
 import { expect, test } from "@playwright/test";
 
+test.beforeEach(async ({ page }) => {
+  await page.route("https://**/*", (route) => route.abort());
+});
+
 const admin = { id: "11111111-1111-4111-8111-111111111111", role: "admin", status: "active", line_subject: "U_admin", auth_user_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", created_at: "2026-01-01T00:00:00.000Z" };
 const customerA = { id: "66666666-6666-4666-8666-666666666666", role: "customer", status: "active", line_subject: "U_customer", auth_user_id: null };
 const customerB = { id: "77777777-7777-4777-8777-777777777777", role: "customer", status: "active", line_subject: "U_customer_b", auth_user_id: null };

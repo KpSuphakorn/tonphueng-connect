@@ -1,6 +1,6 @@
 # ฟีเจอร์ที่พัฒนาแล้ว
 
-เอกสารอ้างอิง implementation ณ 22 ตุลาคม 2569 สำหรับผู้ดูแลและ agent ที่รับงานต่อ ข้อกำหนดอยู่ใน [spec](../.scratch/tonphueng-connect/spec.md) วิธีตั้งค่าอยู่ใน [setup](setup.md) และสถานะตรวจรับอยู่ใน ticket แต่ละใบ
+เอกสารอ้างอิง implementation ณ 23 ตุลาคม 2569 สำหรับผู้ดูแลและ agent ที่รับงานต่อ ข้อกำหนดอยู่ใน [spec](../.scratch/tonphueng-connect/spec.md) วิธีตั้งค่าอยู่ใน [setup](setup.md) และสถานะตรวจรับอยู่ใน ticket แต่ละใบ
 
 ## โครงสร้างปัจจุบัน
 
@@ -31,7 +31,7 @@ Next.js และ TypeScript แอปเดียว ใช้ Supabase Auth, P
 
 ข้อมูล: `app_accounts` เก็บบทบาท/สถานะ/ตัวตน; `app_sessions` เก็บ session ที่เพิกถอนได้ ตาม [migration 001](../supabase/migrations/202610220001_identity.sql) ซึ่งใช้กับโครงการจริงแล้วผ่าน SQL Editor ไม่ได้บันทึก CLI migration history
 
-สถานะ: implementation และ local review ผ่าน; การเข้า LINE จริง การผูก Admin และ session ข้ามการเปิดแอปยังรอตรวจรับ ดู [ticket 01](../.scratch/tonphueng-connect/issues/01-role-login.md) และ [ผลทดสอบ](../agent-runs/01-role-login/test-report.md)
+สถานะ: production Vercel deploy และ LIFF endpoint/scope ได้รับการตรวจยืนยันแล้ว; การเข้า LINE จริง การผูก Admin และ session ข้ามการเปิดแอปยังรอตรวจรับ การแก้ callback ต่อเนื่องจาก Chrome ภายนอกนี้ยังรอ deploy และทดสอบบนมือถือ ดู [ticket 01](../.scratch/tonphueng-connect/issues/01-role-login.md) และ [ผลทดสอบ](../agent-runs/01-role-login/test-report.md)
 
 ## 02 — สมัครผู้ประกอบการและอนุมัติ
 

@@ -1,6 +1,6 @@
 # Ticket 01 local test report
 
-## Checks
+## Initial implementation checks (22 Oct 2026)
 
 - `PATH=/Users/suphakorninsee/.local/bin:$PATH npm run typecheck` — passed.
 - `PATH=/Users/suphakorninsee/.local/bin:$PATH npm test -- --reporter=dot` — passed, 10 tests.
@@ -12,7 +12,7 @@ HTTP tests cover customer creation from verified LINE subject only, rejecting pr
 
 Browser tests cover the Staff login form, opening an offer to its truthful empty state, and denial of a tampered cookie on Staff/Admin pages.
 
-## Supabase connection evidence
+## Initial Supabase and app configuration evidence (22 Oct 2026)
 
 - The approved identity migration was applied manually in the Supabase SQL Editor inside a transaction (`BEGIN`/`COMMIT`). It was not applied through the Supabase CLI and no migration-history entry is claimed.
 - SQL inspection confirmed `app_accounts` and `app_sessions` exist with RLS enabled, browser roles denied table access, and server `service_role` access granted. Screenshot evidence: `/tmp/tonphueng-supabase-rls.png`.
@@ -22,9 +22,25 @@ Browser tests cover the Staff login form, opening an offer to its truthful empty
 
 ## Remaining live acceptance
 
-LINE LIFF sign-in and real role/session flows remain unverified. There is no LIFF ID/endpoint or HTTPS host, and no initial Admin Auth user has been created. Customer LINE login, owner Admin first binding and later matching login, approved Staff login, persisted session reopen, and logout followed by denied reopen still need a manual check after LINE setup and account provisioning.
+The Vercel deployment and LIFF endpoint/scope are now configured and owner-verified. The owner reported the external Chrome flow returned to login and required role selection again; this is not successful acceptance. The callback continuation fix below remains local and awaits deployment. Customer login from LINE OA/chat, Customer callback continuation on a device, initial Admin binding and later matching login, approved Staff login, persisted session reopen, and logout followed by denied reopen still need manual verification with owner-controlled accounts.
 
-## Review notes
+## Callback continuation update (23 Oct 2026)
+
+- `PATH=/Users/suphakorninsee/.local/bin:$PATH npm run typecheck` — passed.
+- `PATH=/Users/suphakorninsee/.local/bin:$PATH npm test -- --reporter=dot` — passed, 33 tests.
+- `PATH=/Users/suphakorninsee/.local/bin:$PATH npm run test:e2e` — passed, 11 browser tests total: 10 login/home/session checks and 1 Staff registration/profile browser flow.
+- `PATH=/Users/suphakorninsee/.local/bin:$PATH npm run build` — passed with Next.js 16.4.2.
+- Login browser coverage includes mount initialization without external login, explicit Customer callback continuation with one `/api/auth/line` POST and no second role choice, an already signed-in LIFF session, init failure followed by explicit retry, OAuth cancellation then explicit retry while preserving unrelated query parameters, Back then retry, persisted `pageshow` cancellation while initialization is pending, expired intent unlock, stale auth-response cancellation, and Staff/Admin form behavior.
+- Browser tests use fake LIFF ID `2012159405-playwright-test`; all HTTPS traffic is intercepted or aborted. The local doubles cover `api.line.me/liff/v2/apps/{liffId}/contextToken`, `api.line.me/oauth2/v2.1/token`, `api.line.me/oauth2/v2.1/certs`, `access.line.me/liff/v1/authorize`, and static LIFF assets. The Staff browser spec aborts all HTTPS requests. Supabase remains pointed at the test loopback server. These are SDK/browser behavior checks, not native LINE in-client or live LINE acceptance.
+- The Back regression verified that the browser returned to a retryable Customer form with the intent cleared. The persisted `pageshow` handler was exercised with a synthetic persisted event while initialization and auth responses were held pending; this does not establish that Chrome restored the page from its native BFCache.
+
+## Callback review resolution (23 Oct 2026)
+
+Independent review found two recovery defects: retained OAuth error parameters prevented retry, and a restored authorization page could remain busy. The production corrections passed a fresh targeted static review; its remaining test condition required exercising persisted `pageshow`. That focused test then exposed stale asynchronous authorization, corrected with per-attempt invalidation and covered through retry before initialization resolves. Manager verified the final guards before authorization and after the auth response, and the original review conditions are met locally.
+
+The final production source passed typecheck, 11 browser checks, and a production build. The stale-response test was subsequently strengthened to await response completion and two render frames; that targeted check and typecheck passed without further production changes. The 33 Vitest checks preceded the final client-only corrections and are reused for the unchanged server code. This does not establish native LINE/BFCache or device acceptance. No new commit, push, or deployment was performed for this fix.
+
+## Initial review notes (22 Oct 2026)
 
 - Standards/security review: PASS, no actionable findings.
 - Spec review: PASS, no actionable findings against Ticket 01.

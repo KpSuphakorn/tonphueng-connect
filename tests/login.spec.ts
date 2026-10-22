@@ -1,6 +1,60 @@
 import { expect, test } from "@playwright/test";
+import { generateKeyPairSync, sign } from "node:crypto";
+
+function makeLineToken() {
+  const { privateKey, publicKey } = generateKeyPairSync("ec", { namedCurve: "prime256v1" });
+  const jwk = publicKey.export({ format: "jwk" });
+  const encode = (value: unknown) => Buffer.from(JSON.stringify(value)).toString("base64url");
+  const header = encode({ alg: "ES256", kid: "playwright-key" });
+  const payload = encode({ iss: "https://access.line.me", aud: "2012159405", sub: "playwright-customer", exp: Math.floor(Date.now() / 1000) + 600 });
+  const content = `${header}.${payload}`;
+  const signature = sign("sha256", Buffer.from(content), { key: privateKey, dsaEncoding: "ieee-p1363" }).toString("base64url");
+  return { token: `${content}.${signature}`, key: { ...jwk, kid: "playwright-key", alg: "ES256", use: "sig" } };
+}
+
+async function stubLine(page: import("@playwright/test").Page, onAuthorize: "return" | "cancel-once" | "back-once" = "return", failFirstContext = false, holdContext?: { release?: () => void }) {
+  const { token, key } = makeLineToken();
+  const contextToken = `context.${Buffer.from(JSON.stringify({
+    liffId: "2012159405-playwright-test",
+    endpointUrl: "http://127.0.0.1:4173/login",
+    scope: "openid",
+    type: "full",
+  })).toString("base64url")}.signature`;
+  const lineRequests: string[] = [];
+  let contextAttempts = 0;
+  let authorizationAttempts = 0;
+  await page.route("https://**/*", async (route) => {
+    const url = new URL(route.request().url());
+    if (!url.hostname.endsWith("line.me") && !url.hostname.endsWith("line-scdn.net")) return route.abort();
+    lineRequests.push(url.href);
+    if (url.pathname.endsWith("/contextToken")) {
+      contextAttempts += 1;
+      if (failFirstContext && contextAttempts === 1) return route.fulfill({ status: 503, json: { error: "temporary test failure" } });
+      if (holdContext && contextAttempts === 1) await new Promise<void>((resolve) => { holdContext.release = resolve; });
+      return route.fulfill({ json: { contextToken } });
+    }
+    if (url.pathname.endsWith("/oauth2/v2.1/certs")) return route.fulfill({ json: { keys: [key] } });
+    if (url.pathname.endsWith("/oauth2/v2.1/token")) {
+      return route.fulfill({ json: { access_token: "playwright-access-token", id_token: token, expires_in: 3600 } });
+    }
+    if (url.pathname.endsWith("/liff/v1/authorize")) {
+      authorizationAttempts += 1;
+      const firstAttempt = authorizationAttempts === 1;
+      const body = (onAuthorize === "cancel-once" && firstAttempt)
+        ? `<script>const u=new URLSearchParams(location.search);const t=new URL(u.get("redirect_uri"));t.searchParams.set("error","access_denied");t.searchParams.set("error_description","cancelled");t.searchParams.set("liffOAuth2Error","true");t.searchParams.set("keep","yes");location.replace(t.href)</script>`
+        : (onAuthorize === "back-once" && firstAttempt)
+          ? `<button id="cancel">Cancel</button><script>document.querySelector("#cancel").onclick=()=>history.back()</script>`
+          : `<script>const u=new URLSearchParams(location.search);const t=new URL(u.get("redirect_uri"));t.searchParams.set("code","playwright-code");t.searchParams.set("liffClientId","2012159405");location.replace(t.href)</script>`;
+      return route.fulfill({ contentType: "text/html", body });
+    }
+    if (url.hostname.endsWith("line-scdn.net")) return route.fulfill({ contentType: "application/javascript", body: "" });
+    return route.fulfill({ status: 404, json: { error: "unexpected LINE request" } });
+  });
+  return lineRequests;
+}
 
 test("login lets a person choose the matching account type", async ({ page }) => {
+  const lineRequests = await stubLine(page);
   await page.goto("/login");
 
   await expect(page.getByRole("heading", { name: "เข้าสู่ระบบ Tonphueng Connect" })).toBeVisible();
@@ -12,6 +66,153 @@ test("login lets a person choose the matching account type", async ({ page }) =>
   await expect(page.getByLabel("อีเมล")).toBeVisible();
   await expect(page.getByLabel("รหัสผ่าน")).toBeVisible();
   await expect(page.getByRole("button", { name: "เข้าสู่ระบบ", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "ผู้ดูแลโครงการ" }).click();
+  await expect(page.getByRole("button", { name: "ยืนยันบัญชี LINE ที่ผูกไว้" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "เข้าสู่ระบบ", exact: true })).toBeDisabled();
+  expect(lineRequests.some((url) => url.includes("/authorize"))).toBe(false);
+});
+
+test("Customer choice resumes after LINE callback and submits once without choosing again", async ({ page }) => {
+  const lineRequests = await stubLine(page);
+  let customerPosts = 0;
+  await page.route("**/api/auth/line", async (route) => {
+    customerPosts += 1;
+    await route.fulfill({ json: { redirectTo: "/" } });
+  });
+
+  await page.goto("/login");
+  await page.getByRole("button", { name: "ลูกค้า" }).click();
+  await page.getByRole("button", { name: "ดำเนินการด้วย LINE" }).evaluate((button: HTMLButtonElement) => {
+    button.click();
+    button.click();
+  });
+  await expect(page).toHaveURL(/\/$/);
+  await expect.poll(() => customerPosts).toBe(1);
+  expect(await page.evaluate(() => sessionStorage.getItem("tonphueng-login-intent"))).toBeNull();
+
+  await page.goto("/login");
+  const authorizationsBeforeSignedInVisit = lineRequests.filter((url) => url.includes("/liff/v1/authorize")).length;
+  await page.getByRole("button", { name: "ลูกค้า" }).click();
+  await page.getByRole("button", { name: "ดำเนินการด้วย LINE" }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect.poll(() => customerPosts).toBe(2);
+  expect(lineRequests.filter((url) => url.includes("/liff/v1/authorize")).length).toBe(authorizationsBeforeSignedInVisit);
+});
+
+test("a failed LIFF init can be retried after the Customer explicitly continues", async ({ page }) => {
+  const lineRequests = await stubLine(page, "return", true);
+  await page.route("**/api/auth/line", (route) => route.fulfill({ json: { redirectTo: "/" } }));
+  await page.goto("/login");
+  await expect.poll(() => lineRequests.filter((url) => url.includes("/contextToken")).length).toBe(1);
+  await page.getByRole("button", { name: "ลูกค้า" }).click();
+  await page.getByRole("button", { name: "ดำเนินการด้วย LINE" }).click();
+  await expect(page).toHaveURL(/\/$/);
+  expect(lineRequests.filter((url) => url.includes("/contextToken")).length).toBeGreaterThanOrEqual(2);
+});
+
+test("initial visit does not force LINE login; a canceled callback can be retried without role reselection", async ({ page }) => {
+  const lineRequests = await stubLine(page, "cancel-once");
+  let customerPosts = 0;
+  await page.route("**/api/auth/line", async (route) => {
+    customerPosts += 1;
+    await route.fulfill({ json: { redirectTo: "/" } });
+  });
+  await page.goto("/login");
+  await expect.poll(() => lineRequests.some((url) => url.includes("/contextToken"))).toBe(true);
+  expect(lineRequests.some((url) => url.includes("/authorize"))).toBe(false);
+  await expect(page.getByRole("button", { name: "ลูกค้า" })).toBeVisible();
+  await page.getByRole("button", { name: "ลูกค้า" }).click();
+  await page.getByRole("button", { name: "ดำเนินการด้วย LINE" }).click();
+  await expect(page.getByRole("button", { name: "ดำเนินการด้วย LINE" })).toBeVisible();
+  await expect(page.getByText(/ยังไม่ได้เข้าสู่ระบบ LINE|เชื่อมต่อ LINE ไม่สำเร็จ/)).toBeVisible();
+  expect(await page.evaluate(() => sessionStorage.getItem("tonphueng-login-intent"))).toBeNull();
+  expect(await page.evaluate(() => location.search)).toBe("?keep=yes");
+  await page.getByRole("button", { name: "ดำเนินการด้วย LINE" }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect.poll(() => customerPosts).toBe(1);
+  expect(lineRequests.filter((url) => url.includes("/liff/v1/authorize")).length).toBe(2);
+});
+
+test("Back from external LINE login clears the pending intent and unlocks explicit retry", async ({ page }) => {
+  const lineRequests = await stubLine(page, "back-once");
+  let customerPosts = 0;
+  await page.route("**/api/auth/line", async (route) => {
+    customerPosts += 1;
+    await route.fulfill({ json: { redirectTo: "/" } });
+  });
+  await page.goto("/login");
+  await page.getByRole("button", { name: "ลูกค้า" }).click();
+  await page.getByRole("button", { name: "ดำเนินการด้วย LINE" }).click();
+  await expect(page).toHaveURL(/access\.line\.me\/liff\/v1\/authorize/);
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(page).toHaveURL(/127\.0\.0\.1:4173\/login/);
+  await expect(page.getByRole("button", { name: "ดำเนินการด้วย LINE" })).toBeEnabled();
+  await expect(page.getByText(/การเข้าสู่ระบบ LINE ถูกยกเลิก|ยังไม่ได้เข้าสู่ระบบ LINE/)).toBeVisible();
+  expect(await page.evaluate(() => sessionStorage.getItem("tonphueng-login-intent"))).toBeNull();
+  await page.getByRole("button", { name: "ดำเนินการด้วย LINE" }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect.poll(() => customerPosts).toBe(1);
+  expect(lineRequests.filter((url) => url.includes("/liff/v1/authorize")).length).toBe(2);
+});
+
+test("a persisted pageshow cancels a pending Customer request without starting LINE login", async ({ page }) => {
+  const holdContext: { release?: () => void } = {};
+  const lineRequests = await stubLine(page, "return", false, holdContext);
+  let customerPosts = 0;
+  await page.route("**/api/auth/line", async (route) => {
+    customerPosts += 1;
+    await route.fulfill({ json: { redirectTo: "/" } });
+  });
+  await page.goto("/login");
+  await expect.poll(() => Boolean(holdContext.release)).toBe(true);
+  await page.getByRole("button", { name: "ลูกค้า" }).click();
+  await page.getByRole("button", { name: "ดำเนินการด้วย LINE" }).click();
+  await expect(page.getByRole("button", { name: /กำลังเชื่อมต่อ LINE/ })).toBeDisabled();
+  await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true })));
+  expect(await page.evaluate(() => sessionStorage.getItem("tonphueng-login-intent"))).toBeNull();
+  await expect(page.getByRole("button", { name: "ดำเนินการด้วย LINE" })).toBeEnabled();
+  await expect.poll(() => lineRequests.some((url) => url.includes("/liff/v1/authorize"))).toBe(false);
+  await page.getByRole("button", { name: "ดำเนินการด้วย LINE" }).click();
+  await expect(page.getByRole("button", { name: /กำลังเชื่อมต่อ LINE/ })).toBeDisabled();
+  holdContext.release?.();
+  await expect(page).toHaveURL(/\/$/);
+  await expect.poll(() => customerPosts).toBe(1);
+  expect(lineRequests.filter((url) => url.includes("/liff/v1/authorize")).length).toBe(1);
+});
+
+test("an expired Customer intent unlocks the form after pending LIFF initialization", async ({ page }) => {
+  const holdContext: { release?: () => void } = {};
+  const lineRequests = await stubLine(page, "return", false, holdContext);
+  await page.goto("/login");
+  await expect.poll(() => Boolean(holdContext.release)).toBe(true);
+  await page.getByRole("button", { name: "ลูกค้า" }).click();
+  await page.getByRole("button", { name: "ดำเนินการด้วย LINE" }).click();
+  await page.evaluate(() => sessionStorage.removeItem("tonphueng-login-intent"));
+  holdContext.release?.();
+  await expect(page.getByRole("button", { name: "ดำเนินการด้วย LINE" })).toBeEnabled();
+  await expect(page.getByText(/หมดอายุ/)).toBeVisible();
+  expect(lineRequests.some((url) => url.includes("/liff/v1/authorize"))).toBe(false);
+});
+
+test("a stale LINE auth response cannot navigate after the Customer attempt was canceled", async ({ page }) => {
+  await stubLine(page);
+  let releaseAuthResponse: (() => void) | undefined;
+  await page.route("**/api/auth/line", async (route) => {
+    await new Promise<void>((resolve) => { releaseAuthResponse = resolve; });
+    await route.fulfill({ json: { redirectTo: "/" } });
+  });
+  await page.goto("/login");
+  await page.getByRole("button", { name: "ลูกค้า" }).click();
+  await page.getByRole("button", { name: "ดำเนินการด้วย LINE" }).click();
+  await expect.poll(() => Boolean(releaseAuthResponse)).toBe(true);
+  await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true })));
+  const authResponse = page.waitForResponse((response) => response.url().includes("/api/auth/line"));
+  releaseAuthResponse?.();
+  await (await authResponse).finished();
+  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await expect(page.getByRole("button", { name: "ดำเนินการด้วย LINE" })).toBeEnabled();
+  await expect(page).toHaveURL(/\/login/);
+  expect(await page.evaluate(() => sessionStorage.getItem("tonphueng-login-intent"))).toBeNull();
 });
 
 test("home offers open to an honest empty state", async ({ page }) => {

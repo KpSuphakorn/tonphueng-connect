@@ -20,7 +20,7 @@ export default defineConfig({
       SUPABASE_PUBLISHABLE_KEY: "playwright-publishable-key",
       SUPABASE_SERVICE_ROLE_KEY: "playwright-server-only-key",
       LINE_LOGIN_CHANNEL_ID: "playwright-line-channel",
-      NEXT_PUBLIC_LINE_LIFF_ID: "replace_with_liff_id",
+      NEXT_PUBLIC_LINE_LIFF_ID: "playwright-test-liff-id",
       APP_ORIGIN: "http://127.0.0.1:4173",
     },
   },

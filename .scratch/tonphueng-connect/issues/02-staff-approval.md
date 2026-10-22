@@ -4,7 +4,7 @@
 
 **Blocked by:** 01: เข้าสู่ระบบและตรวจสิทธิ์แต่ละบทบาท.
 
-**Status:** ready-for-agent
+**Status:** implementation-complete-awaiting-live-acceptance
 
 **Spec:** [Approved spec](../spec.md)
 
@@ -25,3 +25,11 @@
 
 - ใช้ข้อมูลและรูปที่เจ้าของอนุญาตสำหรับสาธิต; การเขียนไปบัญชีบริการจริงต้องได้รับอนุญาต
 - บันทึกผลทดสอบผ่าน browser และผลที่อ่านกลับจากการบันทึก ไม่ถือเพียงข้อความแจ้งสำเร็จเป็นหลักฐานว่าข้อมูลถูกเก็บ
+
+## Comments
+
+- 2026-10-22: Local implementation is frozen for independent review. HTTP boundary tests and Playwright use local external-service doubles; no real Supabase or LINE requests were made. See [Ticket 02 local validation](../../../agent-runs/02-staff-approval/test-report.md). The migration remains unapplied, so live integration and owner-controlled acceptance are pending.
+- 2026-10-22: Review corrections applied: actual multipart streams are capped, cleanup failures return safe recovery references, new registration requires a decoded photo, Admin sees the Auth email, and replacement photos are preserved after an ambiguous profile write. Revalidation passed: 20 Vitest tests, 4 Playwright tests, typecheck, production build, and diff check. Mobile screenshots were refreshed at `/tmp/tonphueng-staff-register-mobile.png` and `/tmp/tonphueng-admin-approval-mobile.png`. Evidence and limits are in [Ticket 02 local validation](../../../agent-runs/02-staff-approval/test-report.md). No remote services or migration were touched; real Supabase integration and owner acceptance remain pending.
+- 2026-10-22: Final ambiguity corrections treat any failed/uncertain Service INSERT or profile PATCH response as potentially committed and preserve account/photo state for inspection; HTTP-double tests simulate a committed write followed by 502. Partial upload cleanup includes the attempted object path. Final revalidation: 21 Vitest, 4 Playwright, typecheck, production build, and diff check passed. Admin email is Auth-stored (not claimed verified). See updated [validation report](../../../agent-runs/02-staff-approval/test-report.md); no live services were used.
+- 2026-10-22: Fresh targeted review passed Standards and Spec with no blocking findings. Ticket remains `implementation-complete-awaiting-live-acceptance`; migration 002 and live acceptance remain pending. No Ticket 02 commit or push was made.
+- 2026-10-22: Migration 002 was applied manually in a transaction to the intended Supabase project. Verified the `services` table/RLS, denied browser-role access, private photo bucket and limit, and non-public approval RPC. No account/photo data was seeded. Live Auth/Storage acceptance is still pending HTTPS hosting and LIFF setup; Ticket 02 remains uncommitted and unpushed.

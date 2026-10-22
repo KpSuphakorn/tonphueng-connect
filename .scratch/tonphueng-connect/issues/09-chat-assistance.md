@@ -4,7 +4,9 @@
 
 **Blocked by:** 04: Admin จัดแพ็กเกจ -> Customer เลือก slot; 06: Staff ลงสินค้า -> Customer จัดตะกร้า.
 
-**Status:** ready-for-agent
+**Status:** deferred-optional
+
+**Priority:** optional — ทำเมื่อมีเวลาหลังงานหลัก 01–08 ไม่เป็นเงื่อนไขส่ง prototype; เกณฑ์ด้านล่างใช้เมื่อเลือกทำ
 
 **Spec:** [Approved spec](../spec.md)
 

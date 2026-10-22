@@ -12,14 +12,26 @@
 
 - The primary conversation is Manager and owns scope, authorization, task state, evidence, and the final report. Do not create another Manager agent.
 - Default to Manager only for non-code work and Manager -> Coder for code work. Only Coder may edit source code or notebooks.
-- Use Planner for unresolved architecture or consequential research; Tester for independent integration, remote, or experimental evidence; Reviewer when requested or justified by material risk. Avoid redundant role calls and parallel write-heavy work.
+- Model routing: Manager/Router defaults to GPT-6.1 Sol medium; Planner/Reviewer to GPT-6.1 Sol high; Coder/Tester to GPT-6 Luna high. Docs/standup uses GPT-6 Luna when an override is available. Use configured roles and verify their model settings when delegating; never select Astra automatically or spawn a docs agent just to satisfy a model preference.
+- The Manager checks each change against the approved ticket and repo rules. Add one independent Reviewer only when requested or when changes affect authorization, sensitive data, price calculations, transaction integrity, or webhook/scheduler safety. Routine UI and CRUD changes that reuse established checks do not automatically need a Reviewer.
+- Use Planner only for unresolved architecture or consequential research, and Tester only when separate integration, environment, or experimental evidence is needed. Reuse the Coder for corrections. Avoid redundant role calls and parallel write-heavy work.
 - Propose files to add or modify, with reasons, and obtain user confirmation before writing. Approval applies only to the proposed scope.
-- Follow the requested stages: `grill-with-docs` -> `to-spec` -> `to-tickets` -> `implement` -> `code-review`. Wait for user confirmation of shared understanding, spec, and ticket breakdown before the next stage. If a required skill is unavailable, report it rather than claiming to use it.
-- Coder makes the smallest change for the approved ticket and runs targeted behavioral checks. Use pre-agreed TDD seams where applicable. Reuse a completed applicable review instead of repeating it without new evidence.
+- Consume the existing approved spec and tickets without repeating confirmed planning stages. Use named skills when explicitly invoked; they are not an automatic instruction to spawn their full agent workflow on every ticket. An explicit `code-review` request still uses that skill's two-axis review. Confirm new or changed requirements before implementation. If a required skill is unavailable, report it rather than claiming to use it.
+- Coder makes the smallest change for the approved ticket, runs targeted behavioral checks and typecheck, and uses pre-agreed TDD seams where applicable. Run the relevant regression suite when features connect and before release; include the full suite when required by the task or practical for the current small suite. Local test commands do not require a separate agent.
+- Reuse completed checks and reviews that still cover the change. After a correction, rerun affected checks and review only the changed risk; repeat broader checks only when new evidence justifies it. Keep handoffs limited to the relevant ticket, paths, and evidence.
 - Reviewers are read-only and use fresh agent context for each review pass. After a failure, return to Coder for the smallest correction and rerun the affected checks.
 - Never commit, push, create a GitHub repository, deploy, incur new costs, or write to an external system without explicit authorization, even if a skill instructs it.
 - For complex or remote work, use `agent-runs/<task-id>/` only for applicable plan, ticket, test, review, and result artifacts. Do not duplicate the spec across handoffs.
-- This setup authorizes workflow files only. Product scope, technology, and acceptance criteria remain subject to the staged confirmations above.
+- Workflow and documentation approval does not authorize product scope changes or external writes. Existing spec and ticket approvals remain in effect.
+- Current prototype scope: Tickets 01–08 are core; Tickets 09 (AI chat) and 10 (Feedback) are optional, time permitting. Missing business content may use clearly identified demo data under the spec's prototype policy; authentication and persistence requirements remain in effect. Demo-data approval does not authorize external seeding, deployment, or paid service calls.
+
+## Architecture and documentation
+
+- Keep the single Next.js application and its existing structure. Keep page/form UI, HTTP handling, shared business rules, and external-service access focused in their respective modules. Enforce authorization and input validation on the server, with credentials restricted to server code.
+- Prefer small cohesive modules and existing helpers. Add an abstraction or dependency only for a current, demonstrated need; do not introduce generic repositories, extra application layers, or a framework solely to match an architecture label.
+- [docs/features.md](docs/features.md) is the concise reference for implemented behavior, relevant code/data, and current limitations. Update the affected feature entry with implementation changes; link to existing tickets and test reports instead of copying them.
+- Keep requirements in the existing spec, work state in the existing ticket, setup procedures in `docs/setup.md`, and detailed validation in the existing test report. Maintain pending inputs in the spec's existing table. Do not create another Markdown summary per ticket or duplicate handoff documents by default.
+- Documentation-only changes are handled by the Manager with link/diff checks; they do not need a Coder, another agent review, or an application test run.
 
 ## Agent skills
 

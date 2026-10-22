@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { getAccountFromCookies } from "../../lib/auth";
+import { getStaffDetails, type StaffProfile } from "../../lib/staff";
+import { createServiceClient } from "../../lib/supabase";
 import { LogoutButton } from "../login/login-form";
+import { StaffProfileForm } from "./profile-form";
+
+export const dynamic = "force-dynamic";
 
 export default async function StaffPage() {
   const account = await getAccountFromCookies();
@@ -17,6 +22,12 @@ export default async function StaffPage() {
     );
   }
 
+  const { data: profile, error } = await createServiceClient().from("services")
+    .select("id,account_id,name,address,latitude,longitude,phone,category,other_category,photo_paths")
+    .eq("account_id", account.id)
+    .maybeSingle();
+  const details = profile && !error ? await getStaffDetails(profile as StaffProfile) : null;
+
   return (
     <main className="page-wrap">
       <header className="topbar">
@@ -24,14 +35,12 @@ export default async function StaffPage() {
         <LogoutButton />
       </header>
       <p className="eyebrow">STAFF WORKSPACE</p>
-      <h1>พื้นที่ผู้ประกอบการชุมชน</h1>
-      <div className="staff-panel">
-        <span className="feature-mark" aria-hidden="true">✓</span>
-        <div>
-          <h2>บัญชีได้รับอนุมัติแล้ว</h2>
-          <p>การจัดการสินค้า บริการ และคำสั่งซื้อยังไม่เปิดใช้งาน</p>
-        </div>
-      </div>
+      <h1>ข้อมูลกิจการของฉัน</h1>
+      {details ? <StaffProfileForm profile={details} /> : (
+        <section className="protected-card" role="alert">
+          <p className="error-message">ไม่สามารถโหลดข้อมูลกิจการได้ กรุณาลองใหม่อีกครั้ง</p>
+        </section>
+      )}
     </main>
   );
 }

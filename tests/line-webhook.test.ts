@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createHmac } from "node:crypto";
 import { POST } from "../src/app/api/line/webhook/route";
+import { answerLineMessage } from "../src/lib/chat-assistance";
+
+vi.mock("../src/lib/chat-assistance", () => ({ answerLineMessage: vi.fn() }));
 
 const secret = "messaging-secret";
 const body = (payload: unknown) => JSON.stringify(payload);
@@ -76,5 +79,28 @@ describe("LINE webhook boundary", () => {
     expect((await POST(request(body(payload)))).status).toBe(200);
     expect(calls.filter((call) => call.url.pathname.endsWith("/message/reply"))).toHaveLength(1);
     expect(calls.some((call) => call.url.hostname === "generativelanguage.googleapis.com")).toBe(false);
+  });
+
+  it("forwards a bounded Flex answer after marking the durable reply attempt", async () => {
+    vi.mocked(answerLineMessage).mockResolvedValue({
+      status: "replied", text: "สวนชุมชน ราคา 123.45 บาท เดินชมสวน",
+      messages: [{ type: "flex", altText: "รายการแนะนำ: สวนชุมชน", contents: { type: "carousel", contents: [{
+        type: "bubble", size: "kilo", body: { type: "box", layout: "vertical", spacing: "sm", backgroundColor: "#fffdf8", contents: [] },
+        footer: { type: "box", layout: "vertical", contents: [{ type: "button", style: "primary", height: "md", color: "#264830", action: { type: "uri", label: "ดูรายละเอียด", uri: "https://shop.test/services/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" } }] },
+      }] } }],
+    });
+    const calls = setup((name) => name === "claim_line_webhook_event" ? "claimed"
+      : name === "mark_line_webhook_reply_attempt" ? true : name === "finish_line_webhook_event" ? true : null);
+    const payload = { events: [{ type: "message", webhookEventId: "evt-flex", replyToken: "reply-flex",
+      source: { type: "user", userId: `U${"c".repeat(32)}` }, message: { type: "text", text: "อยากเที่ยวสวน" } }] };
+    expect((await POST(request(body(payload)))).status).toBe(200);
+    const markIndex = calls.findIndex((call) => call.url.pathname.endsWith("mark_line_webhook_reply_attempt"));
+    const sendIndex = calls.findIndex((call) => call.url.pathname.endsWith("/message/reply"));
+    expect(markIndex).toBeGreaterThanOrEqual(0);
+    expect(sendIndex).toBeGreaterThan(markIndex);
+    const sent = JSON.parse(calls[sendIndex].body);
+    expect(sent.messages[0].type).toBe("flex");
+    expect(sent.messages[0].contents.contents).toHaveLength(1);
+    expect(vi.mocked(answerLineMessage)).toHaveBeenCalledTimes(1);
   });
 });

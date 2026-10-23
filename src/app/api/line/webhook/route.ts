@@ -64,13 +64,13 @@ export async function POST(request: Request) {
       if (subject && type === "message" && event.message && typeof event.message === "object") {
         const message = event.message as Record<string, unknown>;
         if (message.type === "text" && typeof message.text === "string" && typeof event.replyToken === "string" && event.replyToken.length <= 512) {
-          let reply: string;
+          let reply: string | import("../../../../lib/line-chat-presentation").LineChatMessage[];
           if (/^\s*FB\b/i.test(message.text)) {
             const saved = await saveFeedbackReply(subject, message.text);
             reply = saved === "saved" ? "ขอบคุณที่แบ่งปันความคิดเห็นครับ/ค่ะ" : saved === "duplicate" ? "ได้รับความคิดเห็นนี้แล้ว ขอบคุณครับ/ค่ะ" : saved === "not_found" ? "ไม่พบรหัส Feedback นี้ กรุณาตรวจรหัสแล้วส่งอีกครั้ง" : saved === "not_sent" ? "คำขอนี้ยังไม่พร้อมรับความคิดเห็น ลองตรวจข้อความเดิมอีกครั้ง" : "กรุณาตอบกลับรูปแบบ FB รหัส6ตัว ตามด้วยความคิดเห็น";
           } else {
             const answer = await answerLineMessage(subject, message.text);
-            reply = answer.text;
+            reply = answer.messages ?? answer.text;
             if (answer.status !== "replied") errorKind = `chat_${answer.status}`;
           }
           const prepared = await client.rpc("mark_line_webhook_reply_attempt", { target_event_id: eventId });

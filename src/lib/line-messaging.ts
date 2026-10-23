@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import type { LineChatMessage } from "./line-chat-presentation";
 
 const LINE_API = "https://api.line.me/v2/bot";
 
@@ -11,12 +12,25 @@ export function verifyLineWebhookSignature(body: Uint8Array, signature: string |
   return provided.length === expected.length && timingSafeEqual(provided, expected);
 }
 
-export async function sendLineReply(replyToken: string, text: string, fetcher: typeof fetch = fetch) {
+function boundedMessages(reply: string | LineChatMessage[] | { messages: LineChatMessage[] }): LineChatMessage[] {
+  if (typeof reply === "string") return [{ type: "text", text: reply.slice(0, 4500) }];
+  const source = Array.isArray(reply) ? reply : reply.messages;
+  return source.slice(0, 5).map((message): LineChatMessage => {
+    if (message.type === "text") return { ...message, text: message.text.slice(0, 4500) };
+    return {
+      ...message,
+      altText: message.altText.slice(0, 400),
+      contents: { type: "carousel", contents: message.contents.contents.slice(0, 3) },
+    };
+  });
+}
+
+export async function sendLineReply(replyToken: string, reply: string | LineChatMessage[] | { messages: LineChatMessage[] }, fetcher: typeof fetch = fetch) {
   const token = process.env.LINE_MESSAGING_CHANNEL_ACCESS_TOKEN?.trim();
   if (!token || token.startsWith("replace_with_")) throw new Error("LINE messaging is not configured");
   const response = await fetcher(`${LINE_API}/message/reply`, {
     method: "POST", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-    body: JSON.stringify({ replyToken, messages: [{ type: "text", text: text.slice(0, 4500) }] }),
+    body: JSON.stringify({ replyToken, messages: boundedMessages(reply) }),
     cache: "no-store", signal: AbortSignal.timeout(7_000),
   });
   return { ok: response.ok, status: response.status };

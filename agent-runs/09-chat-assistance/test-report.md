@@ -21,3 +21,19 @@ The webhook verifies HMAC-SHA256 over bounded raw bytes before parsing or servic
 ## Still pending
 
 No real LINE webhook/push or Gemini request was sent, and nothing was deployed. The schema is applied, but application changes remain local. Live model quality/follow-up behavior, LINE retry delivery, hosted cron execution, actual Free Tier status/quota and device acceptance remain unverified. Gemini Free Tier data may be used by Google to improve its products; never submit private information, and an API key on a paid project can incur charges despite app-side caps.
+
+## Flex presentation extension — 23 October 2026
+
+- `PATH=/Users/suphakorninsee/.local/bin:$PATH npx vitest run tests/chat-assistance.test.ts tests/line-webhook.test.ts tests/trip-feedback.test.ts` — 3 files, 31 tests passed. Added coverage for capped carousel cards, safe detail origins, exact satang rendering, image omission, relevant quick replies, active catalogue image lookup and JPEG conversion, inactive package-linked services, invalid image addresses, and durable webhook reply-attempt ordering for Flex messages.
+- `PATH=/Users/suphakorninsee/.local/bin:$PATH npm run typecheck` — passed.
+- `git diff --check` — passed.
+- The image route reads only an active service/product/package ID, verifies associated Staff is active, uses trusted stored object paths, bounds source size/pixels and returns a cropped JPEG with `no-store`. It makes no arbitrary URL fetch. LINE cards keep the plain response text in conversation history; Feedback still sends plain text.
+- `/tmp/line-chat-simulator.json` is built from three public service rows; `/tmp/line-chat-long-simulator.json` uses synthetic long-title product/package/service text. Both are Flex messages from the production builder with only preview `hero.url` values replaced by the rows' signed photo URLs. These temporary simulator fixtures do not change production URLs or repository files.
+- No LINE/Gemini call, deployment, migration, or external write was performed. Flex display and tap behavior in the LINE app remain unverified.
+
+## Follow-up checks — 24 October 2026
+
+- After neutralizing the remaining fixed chat copy, `PATH=/Users/suphakorninsee/.local/bin:$PATH npx vitest run tests/chat-assistance.test.ts` passed (1 file, 20 tests).
+- `PATH=/Users/suphakorninsee/.local/bin:$PATH npm run build` passed; Next.js included `/api/line/catalogue-image` and `/api/line/webhook` in the production route list.
+- Manager's LINE Flex Simulator checks used three public service rows with preview-only signed photo URL substitutions (`/tmp/line-chat-simulator-desktop.png`, `/tmp/line-chat-simulator-cards.png`), a long Thai title and price (`/tmp/line-chat-simulator-long.png`), and a no-image card (`/tmp/line-chat-simulator-no-image.png`). The local layout detector returned no findings. These previews do not verify a LINE device or an actual message send.
+- The independent Reviewer passed the local implementation and Simulator scope; live LINE acceptance remains pending.

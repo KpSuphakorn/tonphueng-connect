@@ -131,6 +131,9 @@ test("Customer buys for delivery, pays by simulation, Staff updates tracking, an
   await page.getByRole("button", { name: "สั่งซื้อ", exact: true }).click();
   await expect(page.getByText("กรุณากรอกที่อยู่จัดส่งอย่างน้อย 5 ตัวอักษร")).toBeVisible();
   expect(orders.size).toBe(0);
+  // The unsaved address is a session draft on top of the same saved cart, so it survives a reload.
+  await page.reload();
+  await expect(page.getByLabel("ที่อยู่จัดส่ง")).toHaveValue("12");
   await page.getByLabel("ที่อยู่จัดส่ง").fill("บ้านเลขที่ 12 บ้านต้นผึ้ง");
   await page.getByLabel("จำนวน น้ำผึ้งป่า").fill("3");
   // One click saves the edited cart (server reprices it) and creates the Order.

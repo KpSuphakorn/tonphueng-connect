@@ -3,6 +3,8 @@
 import liff from "@line/liff";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Icon, type IconName } from "../components/icons";
+import { PasswordField } from "../components/password-field";
+import { useSessionDraft } from "../components/session-draft";
 
 type Role = "customer" | "staff" | "admin";
 
@@ -77,7 +79,8 @@ function initializeLiff() {
 
 export function LoginForm() {
   const [role, setRole] = useState<Role>();
-  const [email, setEmail] = useState("");
+  // Email is remembered per role for this LINE window/tab; the password is never stored.
+  const [email, setEmail, clearEmailDraft] = useSessionDraft(`login-email:${role ?? "none"}`, "");
   const [password, setPassword] = useState("");
   const [lineIdToken, setLineIdToken] = useState("");
   const [lineStatus, setLineStatus] = useState<LineStatus>("idle");
@@ -258,6 +261,7 @@ export function LoginForm() {
         return;
       }
       if (!response.ok) throw new Error(result.error || "เข้าสู่ระบบไม่สำเร็จ");
+      clearEmailDraft();
       window.location.assign(result.redirectTo || "/");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่");
@@ -334,19 +338,16 @@ export function LoginForm() {
               onChange={(event) => { setEmail(event.target.value); setAcceptanceRequired(false); setAcceptAdminRole(false); }}
             />
           </label>
-          <label className="field">
-            รหัสผ่าน
-            <input
-              type="password"
-              name="password"
-              autoComplete="current-password"
-              disabled={role === "admin" && lineStatus === "connecting"}
-              required
-              maxLength={512}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-            />
-          </label>
+          <PasswordField
+            label="รหัสผ่าน"
+            name="password"
+            autoComplete="current-password"
+            disabled={role === "admin" && lineStatus === "connecting"}
+            required
+            maxLength={512}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
           {role === "admin" && (
             <div className={`line-status line-status-${lineStatus}`} role="status" aria-live="polite">
               <Icon name={lineStatus === "connected" ? "check" : "shield"} size={20} />

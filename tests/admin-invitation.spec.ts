@@ -150,7 +150,7 @@ test("active Admin adds Admins; existing accounts keep their password; others ca
   await page.goto("/login");
   await page.getByRole("button", { name: "ผู้ประกอบการชุมชน" }).click();
   await page.getByLabel("อีเมล").fill("staff@example.test");
-  await page.getByLabel("รหัสผ่าน").fill("staff-password-123");
+  await page.getByLabel("รหัสผ่าน", { exact: true }).fill("staff-password-123");
   await page.getByRole("button", { name: "เข้าสู่ระบบ", exact: true }).click();
   await expect(page).toHaveURL(/\/staff$/);
   await expect(page.getByRole("heading", { name: "ข้อมูลกิจการของฉัน" })).toBeVisible();
@@ -173,7 +173,7 @@ test("a pending Admin sees an explicit acceptance step and resubmits with the ac
   await page.getByRole("button", { name: "ผู้ดูแลโครงการ" }).click();
   await expect(page.getByText("เชื่อม LINE แล้ว", { exact: true })).toBeVisible();
   await page.getByLabel("อีเมล").fill("new@example.test");
-  await page.getByLabel("รหัสผ่าน").fill("initial-password");
+  await page.getByLabel("รหัสผ่าน", { exact: true }).fill("initial-password");
   await page.getByRole("button", { name: "เข้าสู่ระบบ", exact: true }).click();
   await expect(page.getByText("ยืนยันรับสิทธิ์ผู้ดูแล", { exact: true })).toBeVisible();
   const accept = page.getByRole("button", { name: "ยืนยันรับสิทธิ์และเข้าสู่ระบบ" });

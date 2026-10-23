@@ -122,6 +122,8 @@ Tickets 01–08 มี implementation แล้ว (ดูสถานะแย�
 
 Visual pass: ระบบหน้าตาตาม [DESIGN.md](../DESIGN.md) — เขียวป่า/กระดาษครีม/เหลืองน้ำผึ้ง ฟอนต์ IBM Plex Sans Thai + Mitr ผ่าน `next/font`, โลโก้ผึ้งพาเดินและภาพ hero/การ์ดหน้าหลักใน `public/images/` (เครดิตอยู่หน้า `/credits`); `src/app/components/` มี `BottomNav`, `AppHeader`/`Brand` และไอคอน SVG ที่ใช้ร่วมกัน ปุ่มหลัก (สั่งซื้อ, ตรวจราคาและไปหน้าชำระเงิน, บันทึกเข้า My Trip) ติดค้างเหนือแถบเมนูขณะเลื่อน; ไม่เปลี่ยน API ข้อมูล หรือกฎธุรกิจ
 
+ช่องรหัสผ่านทุกช่องมีปุ่มแสดง/ซ่อน (`PasswordField`) และฟอร์มหลักจำข้อความที่พิมพ์ไว้ใน sessionStorage ของหน้าต่าง LINE นั้น (`src/app/components/session-draft.ts`: สมัคร Staff, อีเมลเข้าสู่ระบบ, วิธีรับ/ที่อยู่ในตะกร้า, ตัวเลือก/วันที่/จำนวนคนของแพ็กเกจ, สินค้าใหม่, ข้อมูลกิจการ, อีเมล Admin ใหม่) ไม่เก็บรหัสผ่าน token หรือไฟล์ ล้างเมื่อส่งสำเร็จ และถ้าข้อมูลบน server เปลี่ยน ค่าจาก server ชนะ
+
 ## งานที่ยังไม่พัฒนา
 
 งานหลักที่เหลือคือการตรวจรับ Tickets 07–08 บน LINE จริง ส่วน Ticket 09 (AI chat) และ 10 (Feedback) เป็น optional ทำเมื่อมีเวลา Tickets 04–05 ใช้ migrations 005–006 กับ Supabase จริงแล้วและรอ hosted workflow acceptance; Ticket 06 ใช้ migration 007 แล้วและรอ hosted workflow acceptance รายละเอียดอยู่ใน [tickets เดิม](../.scratch/tonphueng-connect/issues/)

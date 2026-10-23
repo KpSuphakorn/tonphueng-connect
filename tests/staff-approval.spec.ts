@@ -254,7 +254,7 @@ test("Staff can register, wait for Admin approval, edit their own profile, and r
   await page.getByLabel("ลองจิจูด").fill("98.9");
   await page.getByLabel("เบอร์โทรศัพท์").fill("0800000000");
   await page.getByLabel("อีเมล").fill("staff@example.test");
-  await page.getByLabel("รหัสผ่าน").fill("staff-password-123");
+  await page.getByLabel(/^รหัสผ่าน/).fill("staff-password-123");
   await page.getByLabel("รูปกิจการ (1–19 รูป)").setInputFiles({ name: "shop.png", mimeType: "image/png", buffer: await sharp({ create: { width: 2, height: 2, channels: 3, background: "#ffffff" } }).png().toBuffer() });
   await page.getByRole("button", { name: "ส่งข้อมูลสมัคร" }).click();
   await expect.poll(() => registrationBodySize).toBeGreaterThan(0);
@@ -279,7 +279,7 @@ test("Staff can register, wait for Admin approval, edit their own profile, and r
   await page.goto("/login");
   await page.getByRole("button", { name: "ผู้ประกอบการชุมชน" }).click();
   await page.getByLabel("อีเมล").fill("staff@example.test");
-  await page.getByLabel("รหัสผ่าน").fill("staff-password-123");
+  await page.getByLabel("รหัสผ่าน", { exact: true }).fill("staff-password-123");
   await page.getByRole("button", { name: "เข้าสู่ระบบ", exact: true }).click();
   await expect(page).toHaveURL(/\/staff$/);
   await expect(page.getByLabel("ชื่อกิจการ")).toHaveValue("กลุ่มผ้าทอชุมชน");

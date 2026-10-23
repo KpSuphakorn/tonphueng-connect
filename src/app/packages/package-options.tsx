@@ -1,9 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { PackageCategory, PackageService, PackageSlot } from "../../lib/packages";
+import { clearDraft, readDraft, writeDraft } from "../components/session-draft";
+
+type BookingDraft = { choices: Record<string, string[]>; startDate: string; participants: number };
 
 export type PackageView = {
   category: PackageCategory;
@@ -19,16 +22,40 @@ export type SavedPackageSelection = { id: string; category: PackageCategory; sub
 
 export function PackageOptions({ packageView, canSelect, savedSelection }: { packageView: PackageView; canSelect: boolean; savedSelection: SavedPackageSelection | null }) {
   const router = useRouter();
-  const [choices, setChoices] = useState<Record<string, string[]>>(() => Object.fromEntries(packageView.slots.map((slot) => {
-    const saved = savedSelection?.choices.find((choice) => choice.slot_id === slot.id)?.service_ids ?? [];
+  const validChoices = (source: Array<{ slot_id: string; service_ids: string[] }>) => Object.fromEntries(packageView.slots.map((slot) => {
+    const saved = source.find((choice) => choice.slot_id === slot.id)?.service_ids ?? [];
     const available = new Set(slot.options.map((option) => option.id));
     return [slot.id, saved.filter((id) => available.has(id)).slice(0, slot.required_count)];
-  })));
+  }));
+  const [choices, setChoices] = useState<Record<string, string[]>>(() => validChoices(savedSelection?.choices ?? []));
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [startDate, setStartDate] = useState("");
   const [participants, setParticipants] = useState(1);
   const [lastSubmission, setLastSubmission] = useState<{ fingerprint: string; requestId: string } | null>(null);
+  // Session draft of unsaved choices, date and participants. Its base is the catalogue revision plus the saved
+  // selection, so a draft made before the package or the saved choices changed is dropped (server wins).
+  const draftKey = `package-booking:${packageView.id}`;
+  const draftBase = useMemo(() => ({ revision: packageView.revision, saved: savedSelection ? { revision: savedSelection.catalog_revision, choices: savedSelection.choices } : null }), [packageView.revision, savedSelection]);
+  const [draftReady, setDraftReady] = useState(false);
+  useEffect(() => {
+    const draft = canSelect ? readDraft<BookingDraft>(draftKey, draftBase) : undefined;
+    if (draft) {
+      setChoices(validChoices(Object.entries(draft.choices ?? {}).map(([slot_id, service_ids]) => ({ slot_id, service_ids }))));
+      if (typeof draft.startDate === "string") setStartDate(draft.startDate);
+      if (Number.isInteger(draft.participants)) setParticipants(draft.participants);
+    }
+    setDraftReady(true);
+    // Restore once on mount for this package.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    if (!draftReady || !canSelect) return;
+    const untouched = JSON.stringify(choices) === JSON.stringify(validChoices(savedSelection?.choices ?? [])) && !startDate && participants === 1;
+    if (untouched) clearDraft(draftKey); else writeDraft(draftKey, { choices, startDate, participants } satisfies BookingDraft, draftBase);
+    // validChoices depends only on packageView, already covered by draftBase/draftKey.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftReady, canSelect, choices, startDate, participants, draftKey, draftBase]);
   async function save() {
     setBusy(true);
     setMessage("");
@@ -57,6 +84,7 @@ export function PackageOptions({ packageView, canSelect, savedSelection }: { pac
         body: JSON.stringify({ ...payload, request_id: requestId }) });
       const result = await response.json() as { error?: string; booking?: { id: string } };
       if (!response.ok || !result.booking) throw new Error(result.error || "สร้างรายการจองไม่สำเร็จ");
+      clearDraft(draftKey);
       router.push(`/bookings/${result.booking.id}`);
     } catch (error) { setMessage(error instanceof Error ? error.message : "สร้างรายการจองไม่สำเร็จ"); }
     finally { setBusy(false); }

@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import type { CustomerCart } from "../../lib/product-types";
 import { Icon } from "../components/icons";
+import { clearDraft, readDraft, writeDraft } from "../components/session-draft";
+
+type FulfillmentDraft = { fulfillment: "pickup" | "delivery"; address: string };
+const draftKey = (serviceId: string) => `cart-fulfillment:${serviceId}`;
 
 type UnavailableCart = { available: false; service_id: string; store_name: string; items: Array<{ product_id: string; quantity: number }> };
 type CartState = CustomerCart | UnavailableCart;
@@ -37,13 +41,23 @@ export function CartForm() {
       setCart(result.cart ?? null);
       if (result.cart) {
         setItems(result.cart.items.map((item) => ({ ...item })));
-        setFulfillment("fulfillment" in result.cart ? result.cart.fulfillment : "pickup");
-        setAddress("address" in result.cart ? result.cart.address : "");
+        const saved: FulfillmentDraft = { fulfillment: "fulfillment" in result.cart ? result.cart.fulfillment : "pickup", address: "address" in result.cart ? result.cart.address : "" };
+        // An unsaved delivery choice/address typed this session is restored only on top of the same saved cart values.
+        const draft = result.cart.available ? readDraft<FulfillmentDraft>(draftKey(result.cart.service_id), saved) : undefined;
+        setFulfillment(draft?.fulfillment ?? saved.fulfillment);
+        setAddress(draft?.address ?? saved.address);
       } else setItems([]);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "โหลดตะกร้าไม่สำเร็จ"); }
     finally { setLoading(false); }
   }
   useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    if (!cart || !cart.available) return;
+    const saved: FulfillmentDraft = { fulfillment: cart.fulfillment, address: cart.address };
+    const current: FulfillmentDraft = { fulfillment, address: fulfillment === "delivery" ? address : "" };
+    if (current.fulfillment === saved.fulfillment && current.address === saved.address) clearDraft(draftKey(cart.service_id));
+    else writeDraft(draftKey(cart.service_id), current, saved);
+  }, [cart, fulfillment, address]);
 
   async function save() {
     if (!cart || !items.length || !cart.available) return;
@@ -67,6 +81,7 @@ export function CartForm() {
       const response = await fetch("/api/cart", { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ confirm: true, expected_service_id: cart.service_id }), cache: "no-store" });
       const result = await response.json() as { error?: string };
       if (!response.ok) throw new Error(result.error || "ล้างตะกร้าไม่สำเร็จ");
+      clearDraft(draftKey(cart.service_id));
       setCart(null); setItems([]); setConfirmClear(false); setCheckout(null); setNotice("ล้างตะกร้าแล้ว");
     } catch (cause) { setError(cause instanceof Error ? cause.message : "ล้างตะกร้าไม่สำเร็จ"); }
     finally { setBusy(false); }
@@ -97,6 +112,7 @@ export function CartForm() {
         throw new Error(result.error || "สร้างคำสั่งซื้อไม่สำเร็จ");
       }
       const orderId = result.order.id;
+      clearDraft(draftKey(cart.service_id));
       startNavigation(() => router.push(`/orders/${orderId}`));
     } catch (cause) { setError(cause instanceof Error ? cause.message : "สร้างคำสั่งซื้อไม่สำเร็จ"); setBusy(false); }
   }

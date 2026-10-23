@@ -3,6 +3,11 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { uploadStaffPhotosDirectly } from "../photo-upload";
 import type { Product } from "../../../lib/product-types";
+import { clearDraft, readDraft, writeDraft } from "../../components/session-draft";
+
+/** Only the new-product form is kept as a session draft (text fields only; the photo file is never stored). */
+const newProductDraftKey = "staff-product-new";
+type NewProductDraft = { name: string; description: string; price: string };
 
 function baht(value: number) { return `${Math.floor(value / 100)}.${String(value % 100).padStart(2, "0")}`; }
 function satang(value: string) {
@@ -23,6 +28,7 @@ export function ProductEditor() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [preview, setPreview] = useState("");
+  const [draftReady, setDraftReady] = useState(false);
 
   async function load() {
     const response = await fetch("/api/staff/products", { cache: "no-store" });
@@ -32,8 +38,22 @@ export function ProductEditor() {
   }
   useEffect(() => { void load().catch((cause) => setError(cause instanceof Error ? cause.message : "โหลดสินค้าไม่สำเร็จ")); }, []);
   useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
+  useEffect(() => {
+    const draft = readDraft<NewProductDraft>(newProductDraftKey);
+    if (draft) { setName(draft.name ?? ""); setDescription(draft.description ?? ""); setPrice(draft.price ?? ""); }
+    setDraftReady(true);
+  }, []);
+  useEffect(() => {
+    if (!draftReady || editing) return;
+    if (!name && !description && !price) clearDraft(newProductDraftKey);
+    else writeDraft(newProductDraftKey, { name, description, price } satisfies NewProductDraft);
+  }, [draftReady, editing, name, description, price]);
 
-  function reset() { setEditing(null); setName(""); setDescription(""); setPrice(""); setFile(null); setPreview(""); }
+  /** Leaving edit mode brings back the unsaved new-product draft, if any. */
+  function reset() {
+    const draft = readDraft<NewProductDraft>(newProductDraftKey);
+    setEditing(null); setName(draft?.name ?? ""); setDescription(draft?.description ?? ""); setPrice(draft?.price ?? ""); setFile(null); setPreview("");
+  }
   function edit(product: Product) { setEditing(product); setName(product.name); setDescription(product.description); setPrice(baht(product.price_satang)); setFile(null); setPreview(""); setError(""); setNotice(""); }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -50,6 +70,7 @@ export function ProductEditor() {
       const response = await fetch("/api/staff/products", { method: editing ? "PUT" : "POST", body: form, cache: "no-store" });
       const result = await response.json() as { error?: string };
       if (!response.ok) throw new Error(result.error || "บันทึกสินค้าไม่สำเร็จ");
+      if (!editing) clearDraft(newProductDraftKey);
       reset(); await load(); setNotice("บันทึกสินค้าแล้ว");
     } catch (cause) { setError(cause instanceof Error ? cause.message : "บันทึกสินค้าไม่สำเร็จ"); }
     finally { setBusy(false); }

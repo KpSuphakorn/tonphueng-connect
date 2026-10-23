@@ -73,7 +73,7 @@ test("login lets a person choose the matching account type", async ({ page }) =>
 
   await page.getByRole("button", { name: "ผู้ประกอบการชุมชน" }).click();
   await expect(page.getByLabel("อีเมล")).toBeVisible();
-  await expect(page.getByLabel("รหัสผ่าน")).toBeVisible();
+  await expect(page.getByLabel("รหัสผ่าน", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "เข้าสู่ระบบ", exact: true })).toBeVisible();
   expect(lineRequests.some((url) => url.includes("/authorize"))).toBe(false);
   // Choosing Admin obtains the LINE identity without a separate button: outside LINE it goes through LINE login and returns preselected.
@@ -84,6 +84,31 @@ test("login lets a person choose the matching account type", async ({ page }) =>
   await expect(page.getByRole("button", { name: "ยืนยันบัญชี LINE ที่ผูกไว้" })).toHaveCount(0);
   expect(lineRequests.filter((url) => url.includes("/liff/v1/authorize")).length).toBe(1);
   expect(await page.evaluate(() => sessionStorage.getItem("tonphueng-admin-login-intent"))).toBeNull();
+});
+
+test("password can be shown and hidden without submitting; the Staff email (not the password) survives a reload", async ({ page }) => {
+  await stubLine(page);
+  const passwordPosts: string[] = [];
+  page.on("request", (request) => { if (request.url().endsWith("/api/auth/password")) passwordPosts.push(request.url()); });
+  await page.goto("/login");
+  await page.getByRole("button", { name: "ผู้ประกอบการชุมชน" }).click();
+  await page.getByLabel("อีเมล").fill("staff@example.test");
+  const password = page.getByLabel("รหัสผ่าน", { exact: true });
+  await password.fill("secret-password-1");
+  await expect(password).toHaveAttribute("type", "password");
+  await expect(password).toHaveAttribute("autocomplete", "current-password");
+  await page.getByRole("button", { name: "แสดงรหัสผ่าน" }).click();
+  await expect(password).toHaveAttribute("type", "text");
+  await expect(page.getByRole("button", { name: "ซ่อนรหัสผ่าน" })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "ซ่อนรหัสผ่าน" }).click();
+  await expect(password).toHaveAttribute("type", "password");
+  expect(passwordPosts).toHaveLength(0);
+  await page.reload();
+  await page.getByRole("button", { name: "ผู้ประกอบการชุมชน" }).click();
+  await expect(page.getByLabel("อีเมล")).toHaveValue("staff@example.test");
+  await expect(page.getByLabel("รหัสผ่าน", { exact: true })).toHaveValue("");
+  const stored = await page.evaluate(() => JSON.stringify({ ...sessionStorage }));
+  expect(stored).not.toContain("secret-password-1");
 });
 
 test("a canceled Admin LINE connection shows a retry that completes without reselecting the role", async ({ page }) => {

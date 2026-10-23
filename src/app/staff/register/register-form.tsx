@@ -1,7 +1,12 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { uploadStaffPhotosDirectly } from "../photo-upload";
+import { PasswordField } from "../../components/password-field";
+import { useFormDraft } from "../../components/session-draft";
+
+/** Text fields kept as a session draft; the password and photo files are never stored. */
+const draftFields = ["name", "address", "latitude", "longitude", "phone", "category", "other_category", "email"] as const;
 
 const categories = [
   ["community_product", "สินค้าชุมชน"],
@@ -16,6 +21,9 @@ export function RegisterForm() {
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
+  const formRef = useRef<HTMLFormElement>(null);
+  const draft = useFormDraft(formRef, "staff-register", draftFields);
+  useEffect(() => { if (draft.restored?.category) setCategory(draft.restored.category); }, [draft.restored]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -41,6 +49,7 @@ export function RegisterForm() {
       });
       const result = (await response.json()) as { error?: string; message?: string };
       if (!response.ok) throw new Error(result.error || "สมัครไม่สำเร็จ");
+      draft.clear();
       setPending(true);
       setMessage(result.message || "ส่งข้อมูลแล้ว กำลังรอผู้ดูแลอนุมัติ");
     } catch (error) {
@@ -56,7 +65,7 @@ export function RegisterForm() {
     <a className="button button-secondary button-wide" href="/login">กลับไปหน้าเข้าสู่ระบบ</a>
   </div>;
 
-  return <form className="form-stack" onSubmit={submit}>
+  return <form ref={formRef} className="form-stack" onSubmit={submit} onInput={draft.save} onChange={draft.save}>
     <p className="form-help"><span className="required-marker" aria-hidden="true">*</span> จำเป็นต้องกรอก</p>
     <label className="field"><span>ชื่อกิจการ <span className="required-marker" aria-hidden="true">*</span></span><input name="name" required maxLength={160} autoComplete="organization" /></label>
     <label className="field"><span>ที่อยู่ <span className="required-marker" aria-hidden="true">*</span></span><textarea name="address" required maxLength={1000} autoComplete="street-address" /></label>
@@ -68,11 +77,11 @@ export function RegisterForm() {
     <label className="field"><span>ประเภทกิจการ <span className="required-marker" aria-hidden="true">*</span></span><select name="category" required value={category} onChange={(event) => setCategory(event.target.value)}>
       {categories.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
     </select></label>
-    {category === "other" && <label className="field"><span>ระบุประเภทอื่น <span className="required-marker" aria-hidden="true">*</span></span><input name="other_category" required maxLength={120} /></label>}
+    {category === "other" && <label className="field"><span>ระบุประเภทอื่น <span className="required-marker" aria-hidden="true">*</span></span><input name="other_category" required maxLength={120} defaultValue={draft.restored?.other_category ?? ""} /></label>}
     <label className="field"><span>รูปกิจการ (1–19 รูป) <span className="required-marker" aria-hidden="true">*</span></span><input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple required /></label>
     <p className="form-help">รองรับ JPG, PNG หรือ WebP ขนาดไม่เกิน 5 MB ต่อไฟล์ และรวมไม่เกิน 25 MB</p>
     <label className="field"><span>อีเมล <span className="required-marker" aria-hidden="true">*</span></span><input name="email" type="email" required maxLength={254} autoComplete="email" /></label>
-    <label className="field"><span>รหัสผ่าน <span className="required-marker" aria-hidden="true">*</span></span><input name="password" type="password" required minLength={8} maxLength={128} autoComplete="new-password" /></label>
+    <PasswordField label={<span>รหัสผ่าน <span className="required-marker" aria-hidden="true">*</span></span>} name="password" required minLength={8} maxLength={128} autoComplete="new-password" />
     <p className="form-help">หากอีเมลนี้มีบัญชีในระบบอยู่แล้ว (เช่น บัญชีผู้ดูแล) ให้กรอกรหัสผ่านปัจจุบันของบัญชีนั้น ระบบจะไม่เปลี่ยนรหัสผ่านเดิม</p>
     <p className="form-help">รหัสผ่านใช้สำหรับเข้าสู่ระบบและจะไม่แสดงในข้อมูลกิจการ</p>
     <button className="button button-primary button-wide" type="submit" disabled={busy}>{busy ? "กำลังส่งข้อมูล…" : "ส่งข้อมูลสมัคร"}</button>

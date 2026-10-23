@@ -156,6 +156,11 @@ h4 { margin-bottom: 4px; font-size: 1rem; font-weight: 600; }
 .field textarea { min-height: 104px; resize: vertical; line-height: 1.6; }
 .field input::placeholder, .field textarea::placeholder { color: #7a8479; }
 .field small { color: var(--muted); font-size: .75rem; font-weight: 400; }
+.password-input { position: relative; }
+.field .password-input input { padding-right: 52px; }
+.password-toggle { position: absolute; top: 2px; right: 2px; display: grid; width: 44px; height: 44px; place-items: center; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--muted); cursor: pointer; }
+.password-toggle:hover:not(:disabled), .password-toggle[aria-pressed="true"] { color: var(--forest); }
+.password-toggle:disabled { cursor: not-allowed; opacity: .5; }
 .coordinate-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 /* Checkbox and radio rows read as one selectable target. */
 .package-choice { display: flex; min-height: 52px; align-items: center; gap: 12px; border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 14px; background: var(--surface); line-height: 1.5; cursor: pointer; transition: border-color 160ms ease, background-color 160ms ease; }

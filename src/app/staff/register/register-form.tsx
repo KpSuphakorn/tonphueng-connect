@@ -73,6 +73,7 @@ export function RegisterForm() {
     <p className="form-help">รองรับ JPG, PNG หรือ WebP ขนาดไม่เกิน 5 MB ต่อไฟล์ และรวมไม่เกิน 25 MB</p>
     <label className="field"><span>อีเมล <span className="required-marker" aria-hidden="true">*</span></span><input name="email" type="email" required maxLength={254} autoComplete="email" /></label>
     <label className="field"><span>รหัสผ่าน <span className="required-marker" aria-hidden="true">*</span></span><input name="password" type="password" required minLength={8} maxLength={128} autoComplete="new-password" /></label>
+    <p className="form-help">หากอีเมลนี้มีบัญชีในระบบอยู่แล้ว (เช่น บัญชีผู้ดูแล) ให้กรอกรหัสผ่านปัจจุบันของบัญชีนั้น ระบบจะไม่เปลี่ยนรหัสผ่านเดิม</p>
     <p className="form-help">รหัสผ่านใช้สำหรับเข้าสู่ระบบและจะไม่แสดงในข้อมูลกิจการ</p>
     <button className="button button-primary button-wide" type="submit" disabled={busy}>{busy ? "กำลังส่งข้อมูล…" : "ส่งข้อมูลสมัคร"}</button>
     {message && <p className="error-message" role="status" aria-live="polite">{message}</p>}

@@ -66,6 +66,8 @@ function installBoundary(options: {
   patchGateway502AfterCommit?: boolean;
   serviceInsertGateway502AfterCommit?: boolean;
   persistedPhotoPaths?: string[];
+  existingAuthPassword?: string;
+  staffRowExists?: boolean;
 } = {}) {
   vi.stubEnv("SUPABASE_URL", "http://supabase.test");
   vi.stubEnv("SUPABASE_PUBLISHABLE_KEY", "publishable-test-key");
@@ -80,6 +82,15 @@ function installBoundary(options: {
     const headers = new Headers(init?.headers);
     calls.push({ url, method, body, headers });
 
+    if (url.pathname === "/auth/v1/admin/users" && method === "POST" && options.existingAuthPassword) {
+      return Response.json({ code: "email_exists", msg: "A user with this email address has already been registered" }, { status: 422 });
+    }
+    if (url.pathname === "/auth/v1/token" && method === "POST") {
+      const input = JSON.parse(body) as { email: string; password: string };
+      if (!options.existingAuthPassword || input.email !== "staff@example.test" || input.password !== options.existingAuthPassword) return Response.json({ error: "invalid_grant" }, { status: 400 });
+      return Response.json({ access_token: "t", token_type: "bearer", expires_in: 3600, refresh_token: "r", user: { id: "66666666-6666-4666-8666-666666666666", email: "staff@example.test" } });
+    }
+    if (url.pathname === "/rest/v1/app_accounts" && method === "DELETE") return new Response(null, { status: 204 });
     if (url.pathname === "/auth/v1/admin/users" && method === "POST") {
     return Response.json({ id: "44444444-4444-4444-8444-444444444444", email: "staff@example.test" }, { status: 200 });
     }
@@ -88,6 +99,7 @@ function installBoundary(options: {
       return Response.json({ id: "44444444-4444-4444-8444-444444444444" });
     }
     if (url.pathname === "/rest/v1/app_accounts" && method === "POST") {
+      if (options.staffRowExists) return Response.json({ code: "23505", message: "duplicate key app_accounts_role_auth_user_id_key" }, { status: 409 });
       return Response.json({ id: "55555555-5555-4555-8555-555555555555" }, { status: 201 });
     }
     if (url.pathname === "/rest/v1/app_sessions" && method === "GET") {
@@ -346,6 +358,42 @@ describe("Staff registration and approval HTTP behavior", () => {
       reference: "55555555-5555-4555-8555-555555555555",
       photoPaths: persistedPhotoPaths,
     }));
+  });
+
+  it("adds a Staff role to an existing Auth user only with its current password and never changes that password", async () => {
+    const png = await sharp({ create: { width: 1, height: 1, channels: 3, background: "white" } }).png().toBuffer();
+    const form = (password = "a-private-password") => { const value = registrationForm({ photo: new File([png], "shop.png", { type: "image/png" }) }); value.set("password", password); return value; };
+
+    let calls = installBoundary({ existingAuthPassword: "existing-admin-password" });
+    const wrong = await register(multipartRequest("/api/staff/register", form("wrong-password")));
+    expect(wrong.status).toBe(409);
+    const wrongBody = await wrong.json();
+    expect(wrongBody.error).toContain("รหัสผ่านปัจจุบัน");
+    expect(JSON.stringify(wrongBody)).not.toMatch(/admin|ผู้ดูแล/i);
+    expect(calls.some((call) => call.url.pathname === "/rest/v1/app_accounts" && call.method === "POST")).toBe(false);
+    vi.unstubAllGlobals();
+
+    calls = installBoundary({ existingAuthPassword: "existing-admin-password" });
+    const right = await register(multipartRequest("/api/staff/register", form("existing-admin-password")));
+    expect(right.status).toBe(201);
+    const accountInsert = calls.find((call) => call.url.pathname === "/rest/v1/app_accounts" && call.method === "POST");
+    expect(JSON.parse(accountInsert!.body)).toEqual({ role: "staff", status: "pending", auth_user_id: "66666666-6666-4666-8666-666666666666" });
+    expect(calls.some((call) => call.url.pathname.startsWith("/auth/v1/admin/users/") || call.url.pathname === "/auth/v1/user")).toBe(false);
+    vi.unstubAllGlobals();
+
+    calls = installBoundary({ existingAuthPassword: "existing-admin-password", staffRowExists: true });
+    const duplicate = await register(multipartRequest("/api/staff/register", form("existing-admin-password")));
+    expect(duplicate.status).toBe(409);
+    expect((await duplicate.json()).error).toContain("สมัครเป็นผู้ประกอบการไว้แล้ว");
+    vi.unstubAllGlobals();
+
+    calls = installBoundary({ existingAuthPassword: "existing-admin-password", failFirstUpload: true });
+    const failed = await register(multipartRequest("/api/staff/register", form("existing-admin-password")));
+    expect(failed.status).toBe(503);
+    const accountDelete = calls.find((call) => call.url.pathname === "/rest/v1/app_accounts" && call.method === "DELETE");
+    expect(accountDelete?.url.searchParams.get("id")).toBe("eq.55555555-5555-4555-8555-555555555555");
+    expect(accountDelete?.url.searchParams.get("role")).toBe("eq.staff");
+    expect(calls.some((call) => call.url.pathname.startsWith("/auth/v1/admin/users/") && call.method === "DELETE")).toBe(false);
   });
 
   it("does not let a pending Staff session reach the profile endpoint", async () => {

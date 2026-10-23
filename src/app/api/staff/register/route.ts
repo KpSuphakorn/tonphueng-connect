@@ -1,4 +1,4 @@
-import { hasValidSameOrigin } from "../../../../lib/auth";
+import { hasValidSameOrigin, verifyEmailPassword } from "../../../../lib/auth";
 import { createServiceClient } from "../../../../lib/supabase";
 import { deleteStaffPhotos, formProfile, readStaffForm, readStagedStaffPhotos, StaffFormError, StaffPhotoUploadError, uploadStaffPhotos } from "../../../../lib/staff";
 import { claimStaffPhotoUploadSession, finishStaffPhotoUploadSession } from "../../../../lib/staff-photo-uploads";
@@ -40,22 +40,34 @@ export async function POST(request: Request) {
 
   const client = createServiceClient();
   let authUserId: string | undefined;
+  let createdAuthUserId: string | undefined;
   let accountId: string | undefined;
   let photoPaths: string[] = [];
   let serviceWriteAttempted = false;
   try {
     const { data: authData, error: authError } = await client.auth.admin.createUser({ email, password, email_confirm: true });
     if (authError || !authData.user) {
-      await finishStaffPhotoUploadSession(claimed.id, "failed");
-      return response(409, { error: "อีเมลนี้อาจมีบัญชีอยู่แล้ว หรือระบบสร้างบัญชีไม่สำเร็จ" });
+      // The email may already have an Auth user (for example an Admin). Only its owner, proven by the
+      // current password, may add a Staff role to it; the existing password is never changed.
+      const existingAuthUserId = await verifyEmailPassword(email, password);
+      if (!existingAuthUserId) {
+        await finishStaffPhotoUploadSession(claimed.id, "failed");
+        return response(409, { error: "สมัครด้วยอีเมลนี้ไม่ได้ หากอีเมลนี้มีบัญชีในระบบอยู่แล้ว กรุณากรอกรหัสผ่านปัจจุบันของบัญชีนั้น" });
+      }
+      authUserId = existingAuthUserId;
+    } else {
+      createdAuthUserId = authData.user.id;
+      authUserId = createdAuthUserId;
     }
-    const createdAuthUserId = authData.user.id;
-    authUserId = createdAuthUserId;
 
     const { data: account, error: accountError } = await client.from("app_accounts")
-      .insert({ role: "staff", status: "pending", auth_user_id: createdAuthUserId })
+      .insert({ role: "staff", status: "pending", auth_user_id: authUserId })
       .select("id")
       .single();
+    if (accountError?.code === "23505" && !createdAuthUserId) {
+      await finishStaffPhotoUploadSession(claimed.id, "failed");
+      return response(409, { error: "อีเมลนี้สมัครเป็นผู้ประกอบการไว้แล้ว กรุณาเข้าสู่ระบบหรือรอผู้ดูแลอนุมัติ" });
+    }
     if (accountError || !account) throw new Error("Could not create pending staff account");
     const createdAccountId = account.id;
     accountId = createdAccountId;
@@ -85,11 +97,17 @@ export async function POST(request: Request) {
     const failures: string[] = [];
     await finishStaffPhotoUploadSession(claimed.id, "failed");
     try { await deleteStaffPhotos(photoPaths); } catch { failures.push("storage_cleanup_failed"); }
-    if (authUserId) {
+    if (createdAuthUserId) {
       try {
-        const { error } = await client.auth.admin.deleteUser(authUserId);
+        const { error } = await client.auth.admin.deleteUser(createdAuthUserId);
         if (error) failures.push("auth_user_cleanup_failed");
       } catch { failures.push("auth_user_cleanup_failed"); }
+    } else if (accountId) {
+      // Existing Auth user: remove only the Staff row this request added, never the user or its other roles.
+      try {
+        const { error } = await client.from("app_accounts").delete().eq("id", accountId).eq("role", "staff");
+        if (error) failures.push("account_cleanup_failed");
+      } catch { failures.push("account_cleanup_failed"); }
     }
     if (failures.length) {
       const reference = accountId ?? authUserId ?? crypto.randomUUID();

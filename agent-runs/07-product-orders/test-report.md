@@ -1,6 +1,6 @@
 # Ticket 07 — Product Order, simulated payment and Staff fulfilment validation
 
-Migration `202610230008_product_orders.sql` is **not applied** to the connected Supabase project. No external system was written, nothing was seeded, committed or deployed. Live migration, real SQL/PostgREST probes and hosted Customer/Staff/LINE acceptance remain pending.
+Migration `202610230008_product_orders.sql` was applied by the owner in the Supabase SQL Editor inside one transaction on 2026-10-23 (`Success. No rows returned`), and the code was released in `e75c4d1`. Nothing was seeded. Real SQL/PostgREST probes and hosted Customer/Staff/LINE acceptance remain pending.
 
 ## Local checks — 2026-10-23
 

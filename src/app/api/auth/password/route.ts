@@ -3,9 +3,10 @@ import {
   createSession,
   findAccountByAuthUserId,
   validJsonPost,
+  verifyEmailPassword,
 } from "../../../../lib/auth";
 import { LineTokenError, verifyLineIdToken } from "../../../../lib/line";
-import { ConfigurationError, createAuthClient, createServiceClient } from "../../../../lib/supabase";
+import { ConfigurationError, createServiceClient } from "../../../../lib/supabase";
 
 export const runtime = "nodejs";
 
@@ -49,13 +50,11 @@ export async function POST(request: Request) {
       lineSubject = (await verifyLineIdToken(body.lineIdToken)).subject;
     }
 
-    const { data, error } = await createAuthClient().auth.signInWithPassword({
-      email: body.email,
-      password: body.password,
-    });
-    if (error || !data.user) return response(401, { error: "อีเมลหรือรหัสผ่านไม่ถูกต้อง" });
+    const authUserId = await verifyEmailPassword(body.email, body.password);
+    if (!authUserId) return response(401, { error: "อีเมลหรือรหัสผ่านไม่ถูกต้อง" });
 
-    const account = await findAccountByAuthUserId(data.user.id);
+    // The selected role decides which account row is used; one Auth user may hold both Staff and Admin rows.
+    const account = await findAccountByAuthUserId(authUserId, body.role);
     if (!account || account.role !== body.role) {
       return response(403, { error: "บัญชีนี้ไม่มีสิทธิ์เข้าพื้นที่ที่เลือก" });
     }
@@ -65,7 +64,15 @@ export async function POST(request: Request) {
       });
     }
     if (body.role === "admin") {
+      if (account.status === "disabled") return response(403, { error: "บัญชีนี้ถูกปิดใช้งาน" });
       if (account.status === "pending" && account.line_subject === null && lineSubject) {
+        // A new (or bootstrap) Admin must explicitly accept the role before the verified LINE identity is bound.
+        if (!("acceptAdminRole" in body) || body.acceptAdminRole !== true) {
+          return response(409, {
+            code: "admin_acceptance_required",
+            error: "กรุณายืนยันรับสิทธิ์ผู้ดูแลโครงการ และผูกบัญชี LINE นี้กับบัญชีของคุณก่อนเข้าใช้งาน",
+          });
+        }
         const { data: boundAccount, error: bindError } = await createServiceClient()
           .from("app_accounts")
           .update({ line_subject: lineSubject, status: "active" })
@@ -78,7 +85,7 @@ export async function POST(request: Request) {
 
         if (bindError) return response(403, { error: "ไม่สามารถผูกบัญชี LINE นี้กับผู้ดูแลได้" });
         if (!boundAccount) {
-          const refreshed = await findAccountByAuthUserId(data.user.id);
+          const refreshed = await findAccountByAuthUserId(authUserId, "admin");
           if (!refreshed || refreshed.role !== "admin" || refreshed.status !== "active" || refreshed.line_subject !== lineSubject) {
             return response(403, { error: "บัญชี LINE ไม่ตรงกับผู้ดูแลที่ผูกไว้" });
           }

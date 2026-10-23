@@ -21,7 +21,7 @@ Next.js และ TypeScript แอปเดียว ใช้ Supabase Auth, P
 | --- | --- |
 | Customer | LIFF ID token ถูกตรวจบน server ก่อนสร้าง/ค้นบัญชี LINE และออก application session |
 | Staff | อีเมล/รหัสผ่านผ่าน Supabase Auth; สถานะ `pending` หรือ `disabled` ไม่ได้รับสิทธิ์ Staff |
-| Admin | อีเมล/รหัสผ่านร่วมกับ LINE ที่ตรวจแล้ว; Admin เริ่มต้นผูก LINE ครั้งแรกได้ครั้งเดียว และครั้งต่อไปต้องตรงบัญชี |
+| Admin | อีเมล/รหัสผ่านร่วมกับ LINE ที่ตรวจแล้ว; Admin ที่ยังรอ (รวม Admin เริ่มต้น) ต้องยืนยันรับสิทธิ์ก่อนผูก LINE ครั้งแรกได้ครั้งเดียว และครั้งต่อไปต้องตรงบัญชี (Ticket 08) |
 | Session/logout | cookie แบบ HttpOnly; ฐานข้อมูลเก็บ hash ของ token อายุ 14 วัน; logout เพิกถอน session |
 | หน้าลูกค้า | `/services` ค้นหาและบันทึกสถานที่ได้; `/my-trip` แสดงรายการที่บันทึกเอง; `/my-order` แสดงคำสั่งซื้อของบัญชีตาม Ticket 07 |
 
@@ -100,17 +100,29 @@ Staff เห็นเฉพาะ Order ที่จ่ายจำลองแ�
 
 จุดเข้า: `/cart`, `/orders/[orderId]`, `/my-order`, `/staff/orders`, `GET/POST /api/orders`, `POST /api/orders/[orderId]/confirm`, `PATCH /api/staff/orders/[orderId]`; โค้ดหลัก [`orders.ts`](../src/lib/orders.ts) และ migration [008](../supabase/migrations/202610230008_product_orders.sql)
 
-สถานะ: local checks ผ่าน; migration 008 **ยังไม่ apply** กับ Supabase จริง จึงยังใช้บน production ไม่ได้จนกว่าจะได้รับอนุญาตและ apply ไม่มีระบบยกเลิก/คืนเงินหรือสต๊อกตามขอบเขต spec ดู [Ticket 07](../.scratch/tonphueng-connect/issues/07-product-orders.md) และ [ผลทดสอบ](../agent-runs/07-product-orders/test-report.md)
+สถานะ: local checks ผ่าน; migration 008 apply กับ Supabase จริงแล้ว (เจ้าของรันใน SQL Editor 2026-10-23) และ release ใน `e75c4d1`; ยังรอ SQL/PostgREST probes และตรวจรับบน LINE จริง ไม่มีระบบยกเลิก/คืนเงินหรือสต๊อกตามขอบเขต spec ดู [Ticket 07](../.scratch/tonphueng-connect/issues/07-product-orders.md) และ [ผลทดสอบ](../agent-runs/07-product-orders/test-report.md)
+
+## 08 — เพิ่ม Admin และผูก LINE ของผู้รับสิทธิ์
+
+Admin ที่ active (ผูก LINE แล้ว) เพิ่มผู้ดูแลที่ `/admin/admins` ด้วยอีเมลและรหัสผ่านเริ่มต้น 12–128 ตัวอักษร: อีเมลใหม่สร้าง Auth user พร้อมแถว Admin `pending`; อีเมลที่มี Auth user อยู่แล้ว (เช่น Staff) ได้แถว Admin `pending` โดยไม่เปลี่ยนรหัสผ่านเดิม และหน้าแจ้ง "บัญชีนี้มีอยู่แล้ว ผู้รับใช้รหัสผ่านเดิมเข้าสู่ระบบ"; ซ้ำได้ 409; ถ้าบันทึกแถว Admin ไม่สำเร็จ ลบ Auth user ที่เพิ่งสร้าง หน้าแสดงรายชื่อผู้ดูแลพร้อมสถานะ ไม่ส่งรหัสผ่านกลับ
+
+ผู้รับเข้าสู่ระบบด้วยอีเมล/รหัสผ่านและ LINE ที่ server ตรวจแล้ว ถ้ายังไม่ส่ง `acceptAdminRole: true` จะได้ `admin_acceptance_required` และฟอร์มแสดงขั้นตอน "ยืนยันรับสิทธิ์ผู้ดูแล" ก่อนส่งซ้ำ แล้วจึงผูก `line_subject` และเปิดใช้; ครั้งต่อไปต้องใช้ LINE เดิม ผู้ดูแลที่ยังรอไม่มี session และ Admin API/หน้าใช้ไม่ได้ Customer/Staff เพิ่ม Admin ไม่ได้ ไม่มีการเก็บ LINE token
+
+อีเมลเดียวมีได้ทั้ง Staff และ Admin (อย่างละหนึ่งแถว) โดยบทบาทที่เลือกตอนเข้าสู่ระบบกำหนดแถวที่ใช้; สมัคร Staff ด้วยอีเมลที่มีบัญชีแล้วต้องใช้รหัสผ่านปัจจุบันของบัญชีนั้น (ตรวจบน server) และไม่เปลี่ยนรหัสผ่าน
+
+จุดเข้า: `/admin/admins`, `GET/POST /api/admin/admins`, `POST /api/auth/password`, `POST /api/staff/register`; โค้ดหลัก [`admin-invitations.ts`](../src/lib/admin-invitations.ts), [`auth.ts`](../src/lib/auth.ts) และ migration [009](../supabase/migrations/202610230009_multi_role_accounts.sql)
+
+สถานะ: local checks ผ่าน; migration 009 apply กับ Supabase จริงแล้ว (เจ้าของรันใน SQL Editor 2026-10-23) ยังรอตรวจรับเชิญ/ยืนยัน/ผูก LINE บนเครื่องจริง ดู [Ticket 08](../.scratch/tonphueng-connect/issues/08-admin-invitation.md) และ [ผลทดสอบ](../agent-runs/08-admin-invitation/test-report.md)
 
 ## UI และสถานะงาน
 
 UI refinement และ CORS สำหรับ storypage ถูก release พร้อม `c4063d6`; Vercel deployment ผ่านและ endpoint production ที่เกี่ยวข้องตรวจตรงแล้ว (รายละเอียด Ticket 03). หน้าสินค้า/ตะกร้าของ Ticket 06 ใช้ migration 007 ที่ apply แล้ว; ยังรอ hosted workflow acceptance.
 
-Tickets 01–07 มี implementation แล้ว (ดูสถานะแยกใน ticket เดิม); Ticket 07 ยังรอ apply migration 008; Ticket 06 migrate แล้ว และ live checks ที่ยังค้างแยกไว้ในรายงาน ส่วน Ticket 03 UI/CORS release `c4063d6` ผ่าน production verification.
+Tickets 01–08 มี implementation แล้ว (ดูสถานะแยกใน ticket เดิม); Tickets 07–08 apply migrations 008–009 แล้ว; Ticket 06 migrate แล้ว และ live checks ที่ยังค้างแยกไว้ในรายงาน ส่วน Ticket 03 UI/CORS release `c4063d6` ผ่าน production verification.
 
 ## งานที่ยังไม่พัฒนา
 
-งานหลักที่เหลือคือ Ticket 08: เชิญ Admin และการ apply migration 008 ของ Ticket 07 (Order) กับ Supabase จริงพร้อมตรวจรับ ส่วน Ticket 09 (AI chat) และ 10 (Feedback) เป็น optional ทำเมื่อมีเวลา Tickets 04–05 ใช้ migrations 005–006 กับ Supabase จริงแล้วและรอ hosted workflow acceptance; Ticket 06 ใช้ migration 007 แล้วและรอ hosted workflow acceptance รายละเอียดอยู่ใน [tickets เดิม](../.scratch/tonphueng-connect/issues/)
+งานหลักที่เหลือคือการตรวจรับ Tickets 07–08 บน LINE จริง ส่วน Ticket 09 (AI chat) และ 10 (Feedback) เป็น optional ทำเมื่อมีเวลา Tickets 04–05 ใช้ migrations 005–006 กับ Supabase จริงแล้วและรอ hosted workflow acceptance; Ticket 06 ใช้ migration 007 แล้วและรอ hosted workflow acceptance รายละเอียดอยู่ใน [tickets เดิม](../.scratch/tonphueng-connect/issues/)
 
 
 ข้อมูลธุรกิจที่ยังขาดใช้ข้อมูลเดโมที่ระบุชัดเจนได้ ระบบบันทึกและตรวจสิทธิ์ยังทำงานจริง การตั้งค่า/การอนุญาตบริการภายนอกยังค้างตาม [ตารางของ spec](../.scratch/tonphueng-connect/spec.md#ข้อมูลและการตั้งค่าที่ยังรอ)

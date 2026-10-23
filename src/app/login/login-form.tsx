@@ -11,7 +11,7 @@ const roles: Array<{ id: Role; title: string; subtitle: string }> = [
   { id: "admin", title: "ผู้ดูแลโครงการ", subtitle: "อีเมล รหัสผ่าน และ LINE ที่ผูกกับบัญชี" },
 ];
 
-type LoginReply = { error?: string; redirectTo?: string };
+type LoginReply = { error?: string; redirectTo?: string; code?: string };
 const customerIntentKey = "tonphueng-login-intent";
 const customerIntentLifetimeMs = 5 * 60 * 1000;
 let liffInitialization: Promise<void> | undefined;
@@ -70,6 +70,8 @@ export function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [lineIdToken, setLineIdToken] = useState("");
+  const [acceptanceRequired, setAcceptanceRequired] = useState(false);
+  const [acceptAdminRole, setAcceptAdminRole] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const customerSignInStarted = useRef(false);
@@ -180,6 +182,7 @@ export function LoginForm() {
   async function signInWithPassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!role || (role !== "staff" && role !== "admin")) return;
+    if (role === "admin" && acceptanceRequired && !acceptAdminRole) return;
     setBusy(true);
     setMessage("");
     try {
@@ -192,10 +195,15 @@ export function LoginForm() {
           role,
           email,
           password,
-          ...(role === "admin" ? { lineIdToken } : {}),
+          ...(role === "admin" ? { lineIdToken, ...(acceptanceRequired && acceptAdminRole ? { acceptAdminRole: true } : {}) } : {}),
         }),
       });
       const result = (await response.json()) as LoginReply;
+      if (role === "admin" && result.code === "admin_acceptance_required") {
+        setAcceptanceRequired(true);
+        setAcceptAdminRole(false);
+        return;
+      }
       if (!response.ok) throw new Error(result.error || "เข้าสู่ระบบไม่สำเร็จ");
       window.location.assign(result.redirectTo || "/");
     } catch (error) {
@@ -224,6 +232,8 @@ export function LoginForm() {
               setRole(item.id);
               setMessage("");
               setLineIdToken("");
+              setAcceptanceRequired(false);
+              setAcceptAdminRole(false);
             }}
           >
             <span>
@@ -261,7 +271,7 @@ export function LoginForm() {
               required
               maxLength={254}
               value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              onChange={(event) => { setEmail(event.target.value); setAcceptanceRequired(false); setAcceptAdminRole(false); }}
             />
           </label>
           <label className="field">
@@ -284,8 +294,18 @@ export function LoginForm() {
               <p className="form-help">บัญชี LINE จะถูกตรวจจากระบบ LINE และต้องตรงกับบัญชีผู้ดูแลนี้</p>
             </>
           )}
-          <button className="button button-primary button-wide" type="submit" disabled={busy || (role === "admin" && !lineIdToken)}>
-            {busy ? "กำลังตรวจสอบ…" : "เข้าสู่ระบบ"}
+          {role === "admin" && acceptanceRequired && (
+            <section className="note-card" aria-labelledby="accept-admin-heading">
+              <strong id="accept-admin-heading">ยืนยันรับสิทธิ์ผู้ดูแล</strong>
+              <p className="form-help">บัญชีนี้ได้รับเชิญเป็นผู้ดูแลโครงการ เมื่อยืนยัน ระบบจะผูกบัญชี LINE ที่ยืนยันแล้วกับบัญชีผู้ดูแลนี้ และการเข้าสู่ระบบผู้ดูแลครั้งต่อไปต้องใช้ LINE บัญชีเดียวกัน</p>
+              <label className="package-choice">
+                <input type="checkbox" checked={acceptAdminRole} onChange={(event) => setAcceptAdminRole(event.target.checked)} />
+                <span>ฉันยืนยันรับสิทธิ์ผู้ดูแลโครงการและผูกบัญชี LINE นี้ <span className="required-marker" aria-hidden="true">*</span></span>
+              </label>
+            </section>
+          )}
+          <button className="button button-primary button-wide" type="submit" disabled={busy || (role === "admin" && (!lineIdToken || (acceptanceRequired && !acceptAdminRole)))}>
+            {busy ? "กำลังตรวจสอบ…" : role === "admin" && acceptanceRequired ? "ยืนยันรับสิทธิ์และเข้าสู่ระบบ" : "เข้าสู่ระบบ"}
           </button>
         </form>
       )}

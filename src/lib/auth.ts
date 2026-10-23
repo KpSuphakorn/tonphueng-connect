@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
-import { createServiceClient } from "./supabase";
+import { createAuthClient, createServiceClient } from "./supabase";
 
 export const SESSION_COOKIE = "tonphueng_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 14;
@@ -39,14 +39,22 @@ export async function findAccountByLineSubject(subject: string, role: AccountRol
   return data as Account | null;
 }
 
-export async function findAccountByAuthUserId(userId: string) {
+/** One Auth user may hold several roles (migration 009); always look up the account row of the requested role. */
+export async function findAccountByAuthUserId(userId: string, role: "staff" | "admin") {
   const { data, error } = await createServiceClient()
     .from("app_accounts")
     .select("id,role,status,line_subject,auth_user_id")
     .eq("auth_user_id", userId)
+    .eq("role", role)
     .maybeSingle();
   if (error) throw new Error("Could not read account");
   return data as Account | null;
+}
+
+/** Verifies an email/password pair with Supabase Auth on the server and returns the Auth user ID, or null. */
+export async function verifyEmailPassword(email: string, password: string) {
+  const { data, error } = await createAuthClient().auth.signInWithPassword({ email, password });
+  return error || !data.user ? null : data.user.id;
 }
 
 export async function createCustomerAccount(subject: string): Promise<Account> {

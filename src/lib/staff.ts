@@ -166,6 +166,7 @@ export async function requireStaff(request: Request): Promise<Account | null> {
 
 export async function requireAdmin(request: Request): Promise<Account | null> {
   const account = await getAccountForSession(readSessionCookie(request));
+  // Pending (unaccepted/unbound) Admins never pass; the app_accounts check constraint guarantees an active Admin has a bound LINE subject.
   return account?.role === "admin" && account.status === "active" ? account : null;
 }
 

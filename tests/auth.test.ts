@@ -73,7 +73,8 @@ function setPasswordAuthBoundary(account: typeof adminAccount, verifiedSubject =
         });
       }
       if (url.pathname.endsWith("/app_accounts") && method === "GET") {
-        return Response.json(account);
+        const role = url.searchParams.get("role")?.slice(3);
+        return Response.json(role && role !== account.role ? null : account);
       }
       if (url.pathname.endsWith("/app_accounts") && method === "PATCH") {
         return Response.json({ ...account, ...JSON.parse(body) });
@@ -194,17 +195,17 @@ describe("Customer LINE login HTTP behavior", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("binds the initial Admin only after password and verified LINE login", async () => {
+  it("binds the initial Admin only after password, verified LINE login, and explicit acceptance", async () => {
     const calls = setPasswordAuthBoundary(adminAccount);
+    const credentials = { role: "admin", email: "owner@example.test", password: "a-long-secret-password", lineIdToken: "header.payload.signature" };
 
-    const response = await passwordLogin(
-      passwordRequest({
-        role: "admin",
-        email: "owner@example.test",
-        password: "a-long-secret-password",
-        lineIdToken: "header.payload.signature",
-      }),
-    );
+    const withoutAcceptance = await passwordLogin(passwordRequest(credentials));
+    expect(withoutAcceptance.status).toBe(409);
+    expect((await withoutAcceptance.json()).code).toBe("admin_acceptance_required");
+    expect(withoutAcceptance.headers.get("set-cookie")).toBeNull();
+    expect(calls.some((call) => call.url.pathname.endsWith("/app_accounts") && call.method === "PATCH")).toBe(false);
+
+    const response = await passwordLogin(passwordRequest({ ...credentials, acceptAdminRole: true }));
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ role: "admin", redirectTo: "/admin" });

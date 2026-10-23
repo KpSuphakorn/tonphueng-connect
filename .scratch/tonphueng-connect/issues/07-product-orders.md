@@ -4,7 +4,7 @@
 
 **Blocked by:** 06: Staff ลงสินค้า -> Customer จัดตะกร้า.
 
-**Status:** implementation-complete-awaiting-migration-and-live-acceptance
+**Status:** implementation-complete-awaiting-live-acceptance
 
 **Spec:** [Approved spec](../spec.md)
 
@@ -24,4 +24,4 @@
 
 - ใช้ค่าส่งและข้อมูลสินค้าเดโมที่กำหนดชัดเจนตาม ticket 06 และนโยบาย prototype ใน spec ได้ โดยบันทึก Order และคำนวณฝั่ง server จริง
 - หากมีส่วนจ่ายจำลองที่ใช้ได้จาก ticket 05 ให้ใช้ต่อเท่าที่เหมาะสม แต่การซื้อสินค้าไม่มี dependency ทางพฤติกรรมที่ต้องรอการจองแพ็กเกจ
-- Local implementation complete: migration `202610230008_product_orders.sql` is **not yet applied** to the connected Supabase project. Local PGlite, HTTP-double and browser evidence (including tracking rule: optional for delivery, rejected for pickup) is in the [Ticket 07 test report](../../../agent-runs/07-product-orders/test-report.md); live migration, real SQL/PostgREST probes and hosted Customer/Staff acceptance remain pending.
+- Local implementation complete and released in `e75c4d1`. Migration `202610230008_product_orders.sql` was applied by the owner in the SQL Editor inside one transaction on 2026-10-23. Local PGlite, HTTP-double and browser evidence (including tracking rule: optional for delivery, rejected for pickup) is in the [Ticket 07 test report](../../../agent-runs/07-product-orders/test-report.md); live migration, real SQL/PostgREST probes and hosted Customer/Staff acceptance remain pending.

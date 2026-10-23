@@ -86,6 +86,24 @@ npm run build
 
 The automated auth tests stub the LINE and Supabase HTTP boundaries. The Playwright server receives explicit fake credentials and a loopback Supabase URL, so browser tests do not use `.env.local` or contact the real project. These tests do not validate the live LINE channel, LIFF configuration, or a real owner login. A live demo still needs manual login and persisted-session checks on a device against the deployed app; for the intended in-client path, open the LIFF link from LINE OA/chat.
 
+## 5. Demo data
+
+[`scripts/seed-demo.ts`](../scripts/seed-demo.ts) seeds demo business content from [`scripts/demo-data/catalog.ts`](../scripts/demo-data/catalog.ts) under the spec's prototype demo-data policy. It creates 12 active Staff accounts (`demo-<category>-<n>@example.com`, 3 each for community products, accommodation, restaurants and tourism/trails), one Service each with 2 business photos near the Ban Ton Phueng trail start, 3 Products with photos for each community-product store, and 2 Sub Packages for each Package category, with slot options limited to the seeded Services. Per the owner's decision, visible text does not say "demo". Seeded records are identified by their `@example.com` accounts (Auth `app_metadata.tonphueng_demo_seed`), fixed Product ids, and fixed Sub Package ids. Names, addresses, prices and packages are invented and are not real offers, agreements or route permissions. Phone numbers are non-routable placeholders (`000-000-…`).
+
+Photos are from Wikimedia Commons under CC BY/BY-SA/CC0/public-domain terms. Each description ends with the required `ภาพ: <author> / Wikimedia Commons (<license>)` line, and the author, license and source page for each file are listed in `PHOTO_CREDITS` in the catalog. Keep these attributions if the copy is edited.
+
+```sh
+npm run seed-demo -- --dry-run                       # local validation and plan; no network or secrets
+DEMO_STAFF_PASSWORD='<12–72 chars>' npm run seed-demo  # create or update; safe to rerun
+npm run seed-demo -- --remove                        # delete everything the script created
+```
+
+The seed needs the Supabase server keys in `.env.local`. `DEMO_STAFF_PASSWORD` may also go in `.env.local`. It becomes the login password for all 12 demo Staff accounts and is never printed. Reruns find accounts by email, re-sync the password, update changed fields, skip existing photo uploads, and remove only unreferenced photos inside demo account folders. Package catalogs keep all existing Sub Packages and Package text. Demo Sub Packages are added to them, or replaced on later runs, through `save_package_catalog` with the current revision. An empty Package description gets demo copy. A category is skipped with a message if it would exceed 12 Sub Packages.
+
+`--remove` takes the demo Sub Packages out of the catalogs and deletes carts, cart items and Orders (Order items cascade) placed with demo stores. It then deletes demo photos and the demo Auth users, which cascades their Staff accounts, Services and Products. Booking snapshots are kept. If the service role is not allowed to delete `product_orders`, the command stops and prints the SQL to run in the SQL Editor.
+
+To delete one old test store: `npm run seed-demo -- --delete-test-store <serviceId>` prints the store name, owner email, and what it will delete. Rerun with `--yes` to proceed. It refuses if the owner is not Staff or is a demo account. If the owner's Auth user also holds an Admin role, only the Staff row is removed. It warns when a Package still lists the deleted store, which must then be edited in `/admin/packages`.
+
 ## Public API for storypage
 
 Base URL: `https://tonphueng-connect.vercel.app`. No API key or application session is required for these public read endpoints.

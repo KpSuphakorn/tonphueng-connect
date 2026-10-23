@@ -13,7 +13,8 @@
     "test": "vitest run tests/auth.test.ts tests/staff-approval.test.ts tests/service-discovery.test.ts tests/staff-photo-uploads.test.ts tests/packages.test.ts tests/bookings.test.ts tests/product-cart.test.ts tests/product-orders.test.ts tests/admin-invitation.test.ts",
     "test:watch": "vitest tests/auth.test.ts tests/staff-approval.test.ts tests/service-discovery.test.ts tests/staff-photo-uploads.test.ts tests/packages.test.ts tests/bookings.test.ts tests/product-cart.test.ts tests/product-orders.test.ts tests/admin-invitation.test.ts",
     "test:e2e": "playwright test",
-    "bootstrap-admin": "tsx scripts/bootstrap-admin.ts"
+    "bootstrap-admin": "tsx scripts/bootstrap-admin.ts",
+    "seed-demo": "tsx scripts/seed-demo.ts"
   },
   "dependencies": {
     "@line/liff": "2.31.2",

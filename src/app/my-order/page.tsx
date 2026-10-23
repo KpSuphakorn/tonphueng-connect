@@ -14,7 +14,7 @@ export default async function MyOrderPage() {
       <h1>My Order</h1>
       <section className="section note-card" aria-live="polite">
         {isCustomer ? (
-          <><strong>ยังไม่มีคำสั่งซื้อ</strong><p style={{ margin: "6px 0 0" }}>เมื่อคุณสั่งซื้อสินค้า รายการและสถานะจะปรากฏที่นี่</p></>
+          <><strong>การชำระเงินและคำสั่งซื้อยังไม่เปิด</strong><p style={{ margin: "6px 0 0" }}>คุณจัดตะกร้าและเลือกวิธีรับสินค้าได้ก่อน เมื่อระบบคำสั่งซื้อพร้อม รายการจะแสดงที่นี่</p><Link href="/cart" className="button button-primary" style={{ marginTop: 14 }}>เปิดตะกร้า</Link></>
         ) : (
           <><strong>เข้าสู่ระบบด้วย LINE เพื่อดู My Order</strong><p style={{ margin: "6px 0 0" }}>คำสั่งซื้อจะแสดงเฉพาะบัญชีลูกค้าของคุณ</p><Link href="/login" className="button button-primary" style={{ marginTop: 14 }}>เข้าสู่ระบบ</Link></>
         )}

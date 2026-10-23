@@ -6,7 +6,7 @@ const TOKEN_TTL_MS = 2 * 60 * 60 * 1000;
 const TOKEN_CLEANUP_MARGIN_MS = 5 * 60 * 1000;
 const MAX_PHOTOS = 19;
 
-export type StaffPhotoFlow = "registration" | "profile";
+export type StaffPhotoFlow = "registration" | "profile" | "product";
 export type ClaimedPhotoSession = { id: string; staging_paths: string[]; expires_at: string };
 
 export class StaffPhotoUploadCleanupError extends Error {
@@ -39,7 +39,7 @@ export async function cleanExpiredStaffPhotoUploads() {
 }
 
 export async function issueStaffPhotoUploadSession(flow: StaffPhotoFlow, count: number, accountId: string | null) {
-  if (!Number.isInteger(count) || count < 1 || count > MAX_PHOTOS) throw new Error("กรุณาเลือก 1–19 รูป");
+  if (!Number.isInteger(count) || count < 1 || count > MAX_PHOTOS || (flow === "product" && count !== 1)) throw new Error("กรุณาเลือก 1–19 รูป");
   await cleanExpiredStaffPhotoUploads();
   const id = randomUUID();
   const token = randomBytes(32).toString("base64url");

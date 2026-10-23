@@ -10,10 +10,10 @@ const offers = [
     action: "ดูแพ็กเกจ",
   },
   {
-    href: null,
-    title: "สินค้าและคำสั่งซื้อ",
-    description: "ข้อมูลสินค้าและคำสั่งซื้อจะแสดงเมื่อบริการพร้อมใช้งาน",
-    action: null,
+    href: "/products",
+    title: "สินค้าชุมชน",
+    description: "เลือกหนึ่งร้านเพื่อดูสินค้าและจัดตะกร้า",
+    action: "เลือกร้านสินค้า",
   },
   {
     href: "/services",
@@ -75,7 +75,7 @@ export default async function HomePage() {
 
       <section className="section note-card" aria-label="ข้อมูล My Trip">
         <strong>ทริปและรายการของคุณ</strong>
-        <p style={{ margin: "6px 0 0" }}>{isCustomer ? "เปิด My Trip เพื่อดูสถานที่และตัวเลือกแพ็กเกจที่บันทึกไว้ ส่วน My Order ยังไม่เปิดให้ใช้งาน" : "เข้าสู่ระบบด้วย LINE เพื่อดู My Trip ส่วน My Order ยังไม่เปิดให้ใช้งาน"}</p>
+        <p style={{ margin: "6px 0 0" }}>{isCustomer ? "เปิด My Trip เพื่อดูสถานที่และตัวเลือกแพ็กเกจที่บันทึกไว้ ส่วน My Order จะแสดงคำสั่งซื้อเมื่อเปิดใช้งาน" : "เข้าสู่ระบบด้วย LINE เพื่อดู My Trip และ My Order ของบัญชีคุณ"}</p>
       </section>
 
       <nav className="bottom-nav" aria-label="เมนูลูกค้า">

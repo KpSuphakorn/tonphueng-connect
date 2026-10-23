@@ -81,6 +81,16 @@ describe("scoped Staff photo upload preparation", () => {
     expect(calls.filter((call) => call.url.pathname === "/rest/v1/rpc/create_staff_photo_upload_session")).toHaveLength(1);
   });
 
+  it("issues one-photo product capabilities only to the active Staff owner", async () => {
+    const calls = installBoundary();
+    expect((await POST(request({ flow: "product", count: 1 }))).status).toBe(403);
+    expect((await POST(request({ flow: "product", count: 2 }, "active-staff-session"))).status).toBe(400);
+    const response = await POST(request({ flow: "product", count: 1 }, "active-staff-session"));
+    expect(response.status).toBe(201);
+    const rpc = calls.find((call) => call.url.pathname === "/rest/v1/rpc/create_staff_photo_upload_session");
+    expect(JSON.parse(rpc!.body)).toMatchObject({ target_flow: "product", target_account_id: staffAccount.id, target_staging_paths: [expect.stringMatching(/^[0-9a-f-]{36}\/1-[0-9a-f-]{36}\.upload$/)] });
+  });
+
   it("bounds JSON bytes and count even when a caller understates Content-Length", async () => {
     installBoundary();
     const oversized = new Request("http://localhost:3000/api/staff/photo-uploads", {

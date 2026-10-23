@@ -36,6 +36,7 @@ export default async function StaffPage() {
       </header>
       <p className="eyebrow">STAFF WORKSPACE</p>
       <h1>ข้อมูลกิจการของฉัน</h1>
+      <p><Link href="/staff/products" className="button button-secondary">จัดการสินค้าของฉัน</Link></p>
       {details ? <StaffProfileForm profile={details} /> : (
         <section className="protected-card" role="alert">
           <p className="error-message">ไม่สามารถโหลดข้อมูลกิจการได้ กรุณาลองใหม่อีกครั้ง</p>

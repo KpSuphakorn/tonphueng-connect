@@ -1,6 +1,6 @@
 "use client";
 
-export async function uploadStaffPhotosDirectly(files: File[], flow: "registration" | "profile") {
+export async function uploadStaffPhotosDirectly(files: File[], flow: "registration" | "profile" | "product") {
   if (!files.length) return null;
   const prepared = await fetch("/api/staff/photo-uploads", {
     method: "POST",

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { createServer } from "node:http";
 import { generateKeyPairSync, sign } from "node:crypto";
 
 function makeLineToken() {
@@ -223,20 +224,29 @@ test("a stale LINE auth response cannot navigate after the Customer attempt was 
   expect(await page.evaluate(() => sessionStorage.getItem("tonphueng-login-intent"))).toBeNull();
 });
 
-test("home offers open to an honest empty state", async ({ page }) => {
+test("home's Product offer opens the empty community-store list", async ({ page }) => {
   const screenshotDir = process.env.UI_SCREENSHOT_DIR;
-  await page.goto("/");
-  if (screenshotDir) {
-    await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.screenshot({ path: `${screenshotDir}/tonphueng-home-mobile.png` });
-    await page.setViewportSize({ width: 1440, height: 1000 });
-    await page.screenshot({ path: `${screenshotDir}/tonphueng-home-desktop.png` });
+  const supabase = createServer((_request, response) => {
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end("[]");
+  });
+  await new Promise<void>((resolve) => supabase.listen(4174, "127.0.0.1", resolve));
+  try {
+    await page.goto("/");
+    if (screenshotDir) {
+      await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.screenshot({ path: `${screenshotDir}/tonphueng-home-mobile.png` });
+      await page.setViewportSize({ width: 1440, height: 1000 });
+      await page.screenshot({ path: `${screenshotDir}/tonphueng-home-desktop.png` });
+    }
+    await page.getByRole("link", { name: /สินค้าชุมชน/ }).click();
+    await expect(page).toHaveURL(/\/products$/);
+    await expect(page.getByRole("heading", { name: "เลือกร้านสินค้าชุมชน" })).toBeVisible();
+    await expect(page.getByText("ยังไม่มีร้านสินค้าชุมชนที่เปิดใช้งาน")).toBeVisible();
+  } finally {
+    await new Promise<void>((resolve, reject) => supabase.close((error) => error ? reject(error) : resolve()));
   }
-  const offer = page.locator("details.feature-card").first();
-  await expect(offer).toBeVisible();
-  await offer.locator("summary").click();
-  await expect(offer.locator(".empty-detail")).toBeVisible();
 });
 
 test("protected Staff and Admin pages deny a tampered session cookie", async ({ page }) => {

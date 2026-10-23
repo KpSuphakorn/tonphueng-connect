@@ -38,12 +38,12 @@ export async function POST(request: Request) {
   }
   if (!body || typeof body !== "object" || Array.isArray(body)) return response(400, { error: "ข้อมูลไม่ถูกต้อง" });
   const input = body as Record<string, unknown>;
-  if (Object.keys(input).sort().join(",") !== "count,flow" || !Number.isInteger(input.count) || (input.count as number) < 1 || (input.count as number) > 19 || (input.flow !== "registration" && input.flow !== "profile")) {
+  if (Object.keys(input).sort().join(",") !== "count,flow" || !Number.isInteger(input.count) || (input.count as number) < 1 || (input.count as number) > 19 || (input.flow !== "registration" && input.flow !== "profile" && input.flow !== "product") || (input.flow === "product" && input.count !== 1)) {
     return response(400, { error: "ข้อมูลไม่ถูกต้อง" });
   }
   const flow = input.flow as StaffPhotoFlow;
-  const account = flow === "profile" ? await requireStaff(request) : null;
-  if (flow === "profile" && !account) return response(403, { error: "ไม่มีสิทธิ์จัดการข้อมูลผู้ประกอบการ" });
+  const account = flow === "registration" ? null : await requireStaff(request);
+  if (flow !== "registration" && !account) return response(403, { error: "ไม่มีสิทธิ์จัดการข้อมูลผู้ประกอบการ" });
   try {
     return response(201, await issueStaffPhotoUploadSession(flow, input.count as number, account?.id ?? null));
   } catch (error) {

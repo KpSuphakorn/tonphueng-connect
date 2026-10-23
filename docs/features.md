@@ -60,7 +60,7 @@ Next.js และ TypeScript แอปเดียว ใช้ Supabase Auth, P
 
 `GET /api/services` เป็น API สาธารณะสำหรับ storypage: หมวดและตัวอย่างคำขออยู่ใน [setup](setup.md#public-api-for-storypage) ส่ง `{ services, hasMore, limit }` ครั้งละ 12 รายการ รองรับ offset และพิกัด GPS รูปเป็น signed URL อายุหนึ่งชั่วโมง หมวด `community_product` คือข้อมูลกิจการสินค้าชุมชน ไม่ใช่ Product รายชิ้นของ Ticket 06
 
-รอบ local นี้เพิ่ม CORS `Access-Control-Allow-Origin: *` เฉพาะ GET/OPTIONS ของ `/api/services` และ `/api/packages` รวม error responses ไม่ใช้ credentials และไม่เปลี่ยนสิทธิ์ API ส่วนตัว ต้อง release ก่อน storypage จะเรียกข้ามเว็บได้ GPS sort ปัจจุบันอ่านรายการที่กรองก่อนเรียง/แบ่งหน้า หากข้อมูลโตมากค่อยย้ายการเรียงเข้า PostgreSQL
+รอบ UI/CORS ถูก release ใน `c4063d6` แล้ว โดย `Access-Control-Allow-Origin: *` ใช้เฉพาะ GET/OPTIONS ของ `/api/services` และ `/api/packages` รวม error responses ไม่ใช้ credentials และไม่เปลี่ยนสิทธิ์ API ส่วนตัว Production ตอบ GET 200, OPTIONS 204 และ invalid category 400 พร้อม CORS; My Trip ที่เป็นส่วนตัวตอบ 403 โดยไม่มี CORS GPS sort ปัจจุบันอ่านรายการที่กรองก่อนเรียง/แบ่งหน้า หากข้อมูลโตมากค่อยย้ายการเรียงเข้า PostgreSQL
 
 Migration 003 ใช้กับ Supabase แล้ว; production GET ตอบ 200 ส่วน Staff edit -> Customer -> My Trip ผ่าน LINE จริงยังรอตรวจ ดู [Ticket 03](../.scratch/tonphueng-connect/issues/03-service-discovery.md) และ [ผลทดสอบ](../agent-runs/03-service-discovery/test-report.md)
 
@@ -82,15 +82,23 @@ Customer เลือกวันเริ่มและผู้เข้า�
 
 สถานะ: local checks pass; migration 006 was applied to the connected Supabase project on 2026-10-23. Real SQL probes passed with all probe writes rolled back, and PostgREST table/RPC access was verified. Hosted Customer/LINE booking acceptance remains pending. See [Ticket 05](../.scratch/tonphueng-connect/issues/05-package-booking.md) and its [test report](../agent-runs/05-package-booking/test-report.md).
 
+## 06 — สินค้าและตะกร้า
+
+Staff จัดการสินค้าในร้านสินค้าชุมชนของตนได้ด้วยชื่อ รายละเอียด ราคา integer satang และรูปส่วนตัวหนึ่งรูป โดย reuse upload capability/session, private staging/canonical buckets และการตรวจ/แปลงรูปเดิม Customer เลือกเฉพาะร้านชุมชน ดูสินค้า เพิ่มจำนวน และเก็บตะกร้าส่วนตัวร้านเดียวได้; การเปลี่ยนร้านต้องยืนยันล้างตะกร้าเดิมอย่างชัดเจน รับที่ร้านคิดค่าส่ง 0; ส่งเดโมคิดคงที่ 5,000 satang พร้อมที่อยู่ที่จำเป็น Server คำนวณยอดจากสินค้า active ปัจจุบัน และซ่อนยอดของตะกร้าที่สินค้า/ร้านใช้ไม่ได้ Order และชำระเงินยังเป็น Ticket 07
+
+จุดเข้า: `/staff/products`, `/products`, `/products/[serviceId]`, `/cart`, `/api/staff/products`, `/api/products`, `/api/cart`; โค้ดหลักอยู่ใน [`products.ts`](../src/lib/products.ts), [`cart.ts`](../src/lib/cart.ts) และ migration [007](../supabase/migrations/202610230007_products_cart.sql)
+
+สถานะ: migration 007 ใช้กับ Supabase จริงแล้วเมื่อ 2026-10-23; RLS/grants และ SQL probes ผ่านโดย rollback ข้อมูลทดสอบทั้งหมด PostgREST เห็นตาราง/RPC แล้ว ยังรอ full hosted Customer/LINE workflow, Product photo upload และ concurrency acceptance ผล local 47 unit/14 browser พร้อมหลักฐานฐานจริงอยู่ใน [Ticket 06 report](../agent-runs/06-product-cart/test-report.md)
+
 ## UI และสถานะงาน
 
-รอบ local นี้ปรับ UI ทั้งแอปผ่าน shared styles: พื้นขาว เส้นแบ่ง ลดการ์ดซ้อน/เงา/ของตกแต่ง คงสีเขียวของผึ้งพาเดิน ช่องกรอกเหมาะกับมือถือและมี focus ชัด หน้าแรกเชื่อมงานที่ทำได้จริง พร้อมระบุสินค้า/Order ที่ยังไม่เปิด Staff บันทึกโปรไฟล์แล้วเห็นผลสำเร็จต่อเนื่องพร้อมข้อมูลที่ refresh
+UI refinement และ CORS สำหรับ storypage ถูก release พร้อม `c4063d6`; Vercel deployment ผ่านและ endpoint production ที่เกี่ยวข้องตรวจตรงแล้ว (รายละเอียด Ticket 03). หน้าสินค้า/ตะกร้าของ Ticket 06 ใช้ migration 007 ที่ apply แล้ว; ยังรอ hosted workflow acceptance.
 
-Tickets 01–05 พัฒนาและทดสอบแล้ว (ดู checkboxes ใน ticket เดิม); live checks ที่ยังค้างแยกไว้แต่ละใบ รอบ UI/CORS/ช่องตัวเลขผ่าน typecheck, unit 42/42, browser 13/13, targeted Staff flow หลังแก้ล้างไฟล์ 1/1 และ production build ตรวจภาพมือถือ/เดสก์ท็อปแล้ว Impeccable detector ไม่พบรายการเตือน งานรอบนี้ยังไม่ commit/push/deploy
+Tickets 01–06 มี implementation แล้ว (ดูสถานะแยกใน ticket เดิม); Ticket 06 migrate แล้ว และ live checks ที่ยังค้างแยกไว้ในรายงาน ส่วน Ticket 03 UI/CORS release `c4063d6` ผ่าน production verification.
 
 ## งานที่ยังไม่พัฒนา
 
-งานหลักที่เหลือคือ Tickets 06–08: สินค้า/Order และเชิญ Admin ส่วน Ticket 09 (AI chat) และ 10 (Feedback) เป็น optional ทำเมื่อมีเวลา Tickets 04–05 ใช้ migrations 005–006 กับ Supabase จริงแล้ว และรอ hosted workflow acceptance ตามรายงาน รายละเอียดอยู่ใน [tickets เดิม](../.scratch/tonphueng-connect/issues/)
+งานหลักที่เหลือคือ Tickets 07–08: Order และเชิญ Admin ส่วน Ticket 09 (AI chat) และ 10 (Feedback) เป็น optional ทำเมื่อมีเวลา Tickets 04–05 ใช้ migrations 005–006 กับ Supabase จริงแล้วและรอ hosted workflow acceptance; Ticket 06 ใช้ migration 007 แล้วและรอ hosted workflow acceptance รายละเอียดอยู่ใน [tickets เดิม](../.scratch/tonphueng-connect/issues/)
 
 
 ข้อมูลธุรกิจที่ยังขาดใช้ข้อมูลเดโมที่ระบุชัดเจนได้ ระบบบันทึกและตรวจสิทธิ์ยังทำงานจริง การตั้งค่า/การอนุญาตบริการภายนอกยังค้างตาม [ตารางของ spec](../.scratch/tonphueng-connect/spec.md#ข้อมูลและการตั้งค่าที่ยังรอ)

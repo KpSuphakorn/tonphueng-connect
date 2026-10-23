@@ -88,7 +88,14 @@ The automated auth tests stub the LINE and Supabase HTTP boundaries. The Playwri
 
 ## 5. Demo data
 
-[`scripts/seed-demo.ts`](../scripts/seed-demo.ts) seeds demo business content from [`scripts/demo-data/catalog.ts`](../scripts/demo-data/catalog.ts) under the spec's prototype demo-data policy. It creates 12 active Staff accounts (`demo-<category>-<n>@example.com`, 3 each for community products, accommodation, restaurants and tourism/trails), one Service each with 2 business photos near the Ban Ton Phueng trail start, 3 Products with photos for each community-product store, and 2 Sub Packages for each Package category, with slot options limited to the seeded Services. Per the owner's decision, visible text does not say "demo". Seeded records are identified by their `@example.com` accounts (Auth `app_metadata.tonphueng_demo_seed`), fixed Product ids, and fixed Sub Package ids. Names, addresses, prices and packages are invented and are not real offers, agreements or route permissions. Phone numbers are non-routable placeholders (`000-000-…`).
+[`scripts/seed-demo.ts`](../scripts/seed-demo.ts) seeds demo business content from [`scripts/demo-data/catalog.ts`](../scripts/demo-data/catalog.ts) under the spec's prototype demo-data policy. It creates 12 active Staff accounts (`demo-<category>-<n>@example.com`, 3 each for community products, accommodation, restaurants and tourism/trails), one Service each with 2 business photos near the Ban Ton Phueng trail start, 3 Products with photos for each community-product store, and 2 Sub Packages for each Package category, with slot options limited to the seeded Services. It also adds activity for the back office:
+
+- **3 pending Staff applicants** (`demo-pending-<n>@example.com`: accommodation, restaurant, and `other` with `other_category`), each with a full Service profile and 2 photos, so `/admin` has applications to approve.
+- **3 Customers.** They are LINE-only rows whose `line_subject` is `demo-customer-<n>`, which can never match a real LINE id (`U` + 32 hex). They cannot sign in, and the schema stores no Customer name.
+- **5 Bookings** on the demo Sub Packages, created with `create_package_booking`. Start dates are 8–31 days after the run date (Bangkok time), with 1–6 participants. Three are paid with `confirm_package_booking` and added to My Trip with `add_booking_to_my_trip`. Two stay pending.
+- **5 Product Orders** on the 3 demo community stores. Each goes through `save_customer_cart`, `create_product_order` and `confirm_product_order`, then `update_staff_product_order`. Together they cover paid, preparing (pickup), shipping with tracking number `EF582630417TH` (delivery), delivered (pickup), and one left pending payment.
+
+Per the owner's decision, visible text does not say "demo". Seeded records are identified by their `@example.com` accounts (Auth `app_metadata.tonphueng_demo_seed`), fixed Product ids, and fixed Sub Package ids. Names, addresses, prices and packages are invented and are not real offers, agreements or route permissions. Phone numbers are non-routable placeholders (`000-000-…`).
 
 Photos are from Wikimedia Commons under CC BY/BY-SA/CC0/public-domain terms. Descriptions carry no credit line; the required attribution (author, license and source page for each file, from `PHOTO_CREDITS` in the catalog) is shown on the `/credits` page linked from the home page. Keep these attributions if the copy is edited.
 
@@ -98,9 +105,20 @@ DEMO_STAFF_PASSWORD='<12–72 chars>' npm run seed-demo  # create or update; saf
 npm run seed-demo -- --remove                        # delete everything the script created
 ```
 
-The seed needs the Supabase server keys in `.env.local`. `DEMO_STAFF_PASSWORD` may also go in `.env.local`. It becomes the login password for all 12 demo Staff accounts and is never printed. Reruns find accounts by email, re-sync the password, update changed fields, skip existing photo uploads, and remove only unreferenced photos inside demo account folders. Package catalogs keep all existing Sub Packages and Package text. Demo Sub Packages are added to them, or replaced on later runs, through `save_package_catalog` with the current revision. An empty Package description gets demo copy. A category is skipped with a message if it would exceed 12 Sub Packages.
+The seed needs the Supabase server keys in `.env.local`. `DEMO_STAFF_PASSWORD` may also go in `.env.local`. It becomes the login password for all demo Staff accounts, including the applicants, and is never printed. Reruns find accounts by email, re-sync the password, update changed fields, skip existing photo uploads, and remove only unreferenced photos inside demo account folders. Package catalogs keep all existing Sub Packages and Package text. Demo Sub Packages are added to them, or replaced on later runs, through `save_package_catalog` with the current revision. An empty Package description gets demo copy. A category is skipped with a message if it would exceed 12 Sub Packages. Rerun behaviour for the activity data:
 
-`--remove` takes the demo Sub Packages out of the catalogs and deletes carts, cart items and Orders (Order items cascade) placed with demo stores. It then deletes demo photos and the demo Auth users, which cascades their Staff accounts, Services and Products. Booking snapshots are kept. If the service role is not allowed to delete `product_orders`, the command stops and prints the SQL to run in the SQL Editor.
+- An applicant the owner has already approved keeps its status; only its profile is refreshed.
+- Bookings and Orders use fixed request UUIDs and are looked up first, so they are never created twice.
+- Order statuses only move forward, so a status the owner advanced while signed in as demo Staff is kept.
+
+`--remove` runs in this order:
+
+1. It deletes the demo Customer rows. This cascades their Bookings, My Trip rows, carts, package selections and Orders, so no DELETE grant on `package_bookings` or `product_orders` is needed for them.
+2. It takes the demo Sub Packages out of the catalogs.
+3. It deletes the carts, cart items and Orders that real Customers placed with demo stores (Order items cascade).
+4. It deletes the photos and Auth users of the demo stores and applicants, which cascades their Staff accounts, Services and Products.
+
+Bookings by real Customers keep their snapshots. The service role on the connected project cannot delete `product_orders`. So if real Customers have Orders with demo stores, the command stops and prints the exact SQL to run in the SQL Editor; rerun it afterwards. With no such Orders, it never tries the delete.
 
 To delete one old test store: `npm run seed-demo -- --delete-test-store <serviceId>` prints the store name, owner email, and what it will delete. Rerun with `--yes` to proceed. It refuses if the owner is not Staff or is a demo account. If the owner's Auth user also holds an Admin role, only the Staff row is removed. It warns when a Package still lists the deleted store, which must then be edited in `/admin/packages`.
 

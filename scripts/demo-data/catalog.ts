@@ -306,3 +306,100 @@ export const DEMO_PACKAGES: DemoPackageCategory[] = [
     ],
   },
 ];
+
+// ---------- Activity data: Customers, Bookings, Orders and pending Staff applicants ----------
+
+export type DemoApplicant = {
+  id: string;
+  key: string;
+  email: string;
+  name: string;
+  description: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  phone: string;
+  category: DemoServiceCategory | "other";
+  other_category: string | null;
+  photos: [string, string];
+};
+
+/** Customer accounts are LINE-only in the schema (no name column); they cannot sign in. */
+export type DemoCustomer = { key: string; line_subject: string };
+
+export type DemoBooking = {
+  request_id: string;
+  customer: string;
+  sub_package_id: string;
+  /** Start date = today in Asia/Bangkok + this many days, computed at run time. */
+  start_in_days: number;
+  participants: number;
+  /** Service keys (e.g. "tourism_trail-1"), one per slot in slot order. */
+  choices: string[];
+  paid: boolean;
+};
+
+export type DemoOrderStatus = "pending_payment" | "paid" | "preparing" | "shipping" | "delivered";
+export type DemoOrder = {
+  request_id: string;
+  customer: string;
+  /** Community-product service key, e.g. "community_product-1". */
+  store: string;
+  items: Array<{ product_id: string; quantity: number }>;
+  fulfillment: "pickup" | "delivery";
+  address: string;
+  status: DemoOrderStatus;
+  tracking_number?: string;
+};
+
+const bookingRequestId = (n: number) => id("00000005", n);
+const orderRequestId = (n: number) => id("00000006", n);
+
+/** Real LINE user ids are "U" + 32 hex characters, so this prefix can never collide with one. */
+export const DEMO_CUSTOMER_SUBJECT_PREFIX = "demo-customer-";
+export const DEMO_CUSTOMERS: DemoCustomer[] = [1, 2, 3].map((n) => ({ key: `customer-${n}`, line_subject: `${DEMO_CUSTOMER_SUBJECT_PREFIX}${n}` }));
+
+export const DEMO_APPLICANTS: DemoApplicant[] = [
+  {
+    id: serviceId(21), key: "pending-1", email: `demo-pending-1@${DEMO_EMAIL_DOMAIN}`, category: "accommodation", other_category: null,
+    name: "บ้านพักริมลำห้วยต้นผึ้ง",
+    description: "บ้านพักไม้หลังเล็กริมลำห้วย รับแขกได้ครั้งละหนึ่งครอบครัว มีระเบียงนั่งฟังเสียงน้ำและครัวเล็ก ๆ ให้ทำอาหารเอง เจ้าของบ้านพร้อมพาเดินชมสวนในตอนเช้า",
+    address: "ริมลำห้วยด้านใต้ บ้านต้นผึ้ง จ.เชียงใหม่", latitude: 18.8011, longitude: 99.1769, phone: "000-000-0501",
+    photos: ["accommodation-2-b.jpg", "accommodation-1-a.jpg"],
+  },
+  {
+    id: serviceId(22), key: "pending-2", email: `demo-pending-2@${DEMO_EMAIL_DOMAIN}`, category: "restaurant", other_category: null,
+    name: "ร้านขนมจีนน้ำเงี้ยวต้นผึ้ง",
+    description: "ร้านอาหารเช้าเล็ก ๆ ขายขนมจีนน้ำเงี้ยว น้ำพริกอ่อง และไส้อั่วทำเอง เปิดตั้งแต่เช้าตรู่สำหรับคนที่จะออกเดินป่าหรือขึ้นไปชมหมอก",
+    address: "ข้างลานกลางหมู่บ้าน บ้านต้นผึ้ง จ.เชียงใหม่", latitude: 18.8057, longitude: 99.1786, phone: "000-000-0502",
+    photos: ["restaurant-3-a.jpg", "restaurant-1-b.jpg"],
+  },
+  {
+    id: serviceId(23), key: "pending-3", email: `demo-pending-3@${DEMO_EMAIL_DOMAIN}`, category: "other", other_category: "ช่างภาพนำเที่ยวธรรมชาติ",
+    name: "ถ่ายภาพธรรมชาติกับคนต้นผึ้ง",
+    description: "พาเดินถ่ายภาพหมอก ป่า และวิถีชาวบ้านในมุมที่คนในหมู่บ้านรู้จักดี เหมาะกับคนที่อยากได้ภาพสวยและเรื่องเล่าระหว่างทาง ปรับเส้นทางตามช่วงเวลาและสภาพอากาศ",
+    address: "จุดนัดพบหน้าศาลากลางหมู่บ้าน บ้านต้นผึ้ง จ.เชียงใหม่", latitude: 18.8095, longitude: 99.1763, phone: "000-000-0503",
+    photos: ["tourism_trail-2-b.jpg", "tourism_trail-1-a.jpg"],
+  },
+];
+
+export const DEMO_BOOKINGS: DemoBooking[] = [
+  { request_id: bookingRequestId(1), customer: "customer-1", sub_package_id: subPackageId(1), start_in_days: 10, participants: 2, choices: ["tourism_trail-1", "restaurant-1"], paid: true },
+  { request_id: bookingRequestId(2), customer: "customer-2", sub_package_id: subPackageId(2), start_in_days: 24, participants: 4, choices: ["tourism_trail-2", "accommodation-3", "restaurant-2"], paid: true },
+  { request_id: bookingRequestId(3), customer: "customer-3", sub_package_id: subPackageId(3), start_in_days: 17, participants: 6, choices: ["tourism_trail-1", "restaurant-3"], paid: false },
+  { request_id: bookingRequestId(4), customer: "customer-1", sub_package_id: subPackageId(6), start_in_days: 31, participants: 3, choices: ["community_product-2", "accommodation-1", "restaurant-1"], paid: true },
+  { request_id: bookingRequestId(5), customer: "customer-2", sub_package_id: subPackageId(5), start_in_days: 8, participants: 1, choices: ["community_product-1", "restaurant-2"], paid: false },
+];
+
+export const DEMO_ORDERS: DemoOrder[] = [
+  { request_id: orderRequestId(1), customer: "customer-1", store: "community_product-1", fulfillment: "delivery", status: "paid",
+    address: "99/9 หมู่ 4 ต.ช้างเผือก อ.เมืองเชียงใหม่ จ.เชียงใหม่ 50300", items: [{ product_id: productId(1), quantity: 1 }, { product_id: productId(2), quantity: 2 }] },
+  { request_id: orderRequestId(2), customer: "customer-2", store: "community_product-2", fulfillment: "pickup", status: "preparing",
+    address: "", items: [{ product_id: productId(4), quantity: 2 }, { product_id: productId(6), quantity: 1 }] },
+  { request_id: orderRequestId(3), customer: "customer-3", store: "community_product-3", fulfillment: "delivery", status: "shipping", tracking_number: "EF582630417TH",
+    address: "12/3 ซอยสุขุมวิท 50 แขวงพระโขนง เขตคลองเตย กรุงเทพฯ 10110", items: [{ product_id: productId(7), quantity: 2 }, { product_id: productId(8), quantity: 1 }] },
+  { request_id: orderRequestId(4), customer: "customer-2", store: "community_product-1", fulfillment: "pickup", status: "delivered",
+    address: "", items: [{ product_id: productId(3), quantity: 1 }] },
+  { request_id: orderRequestId(5), customer: "customer-3", store: "community_product-2", fulfillment: "delivery", status: "pending_payment",
+    address: "45 ถ.ห้วยแก้ว ต.สุเทพ อ.เมืองเชียงใหม่ จ.เชียงใหม่ 50200", items: [{ product_id: productId(5), quantity: 1 }, { product_id: productId(4), quantity: 3 }] },
+];

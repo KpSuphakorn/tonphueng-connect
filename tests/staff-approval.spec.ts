@@ -276,7 +276,8 @@ test("Staff can register, wait for Admin approval, edit their own profile, and r
   await page.getByRole("button", { name: "อนุมัติผู้ประกอบการ" }).click();
   await expect(page.getByText("ไม่มีผู้สมัครที่รออนุมัติ")).toBeVisible();
 
-  await page.goto("/login");
+  // Still signed in as Admin, so the Staff login is a deliberate role switch (an active session otherwise skips the picker).
+  await page.goto("/login?switch=1");
   await page.getByRole("button", { name: "ผู้ประกอบการชุมชน" }).click();
   await page.getByLabel("อีเมล").fill("staff@example.test");
   await page.getByLabel("รหัสผ่าน", { exact: true }).fill("staff-password-123");

@@ -48,6 +48,30 @@ function clearIntent(key: string) {
   try { sessionStorage.removeItem(key); } catch { /* Storage may be unavailable. */ }
 }
 
+/** Last role used on this device (role only, never a token) to preselect the picker next time. */
+const lastRoleKey = "tonphueng-last-role";
+/** One silent Customer re-login per LINE window, so a failing attempt can never loop. */
+const autoLoginAttemptKey = "tonphueng-auto-login-attempted";
+
+function readLastRole(): Role | undefined {
+  try {
+    const value = localStorage.getItem(lastRoleKey);
+    return value === "customer" || value === "staff" || value === "admin" ? value : undefined;
+  } catch { return undefined; }
+}
+
+function rememberRole(role: Role) {
+  try { localStorage.setItem(lastRoleKey, role); } catch { /* Preselection is a convenience only. */ }
+}
+
+function claimAutoLoginAttempt() {
+  try {
+    if (sessionStorage.getItem(autoLoginAttemptKey)) return false;
+    sessionStorage.setItem(autoLoginAttemptKey, "1");
+    return true;
+  } catch { return false; }
+}
+
 const hasCustomerIntent = () => hasIntent(customerIntentKey);
 const saveCustomerIntent = () => saveIntent(customerIntentKey);
 const clearCustomerIntent = () => clearIntent(customerIntentKey);
@@ -77,8 +101,10 @@ function initializeLiff() {
   return liffInitialization;
 }
 
-export function LoginForm() {
+/** `switching` (from `?switch=1`) means the person chose to pick a role again, so no silent re-login. */
+export function LoginForm({ switching = false }: { switching?: boolean }) {
   const [role, setRole] = useState<Role>();
+  const [autoSigningIn, setAutoSigningIn] = useState(false);
   // Email is remembered per role for this LINE window/tab; the password is never stored.
   const [email, setEmail, clearEmailDraft] = useSessionDraft(`login-email:${role ?? "none"}`, "");
   const [password, setPassword] = useState("");
@@ -100,6 +126,8 @@ export function LoginForm() {
     if (resumingCustomer) setRole("customer");
     const resumingAdmin = !resumingCustomer && hasAdminIntent();
     if (resumingAdmin) { setRole("admin"); setLineStatus("connecting"); }
+    const lastRole = !resumingCustomer && !resumingAdmin ? readLastRole() : undefined;
+    if (lastRole) setRole(lastRole);
     const handlePageShow = (event: PageTransitionEvent) => {
       if (!event.persisted) return;
       customerAttemptGeneration.current += 1;
@@ -125,10 +153,23 @@ export function LoginForm() {
         void connectAdminLine(true);
         return;
       }
-      if (!hasCustomerIntent() || callbackResumed.current) return;
-      callbackResumed.current = true;
-      setRole("customer");
-      void signInWithLine(true);
+      if (hasCustomerIntent()) {
+        if (callbackResumed.current) return;
+        callbackResumed.current = true;
+        setRole("customer");
+        void signInWithLine(true);
+        return;
+      }
+      // Silent Customer re-login inside LINE only: remembered Customer, LINE already signed in, not a deliberate switch.
+      if (lastRole === "customer" && !switching && liff.isInClient() && liff.isLoggedIn() && claimAutoLoginAttempt()) {
+        if (!saveCustomerIntent()) return;
+        callbackResumed.current = true;
+        setAutoSigningIn(true);
+        void signInWithLine(true).finally(() => setAutoSigningIn(false));
+        return;
+      }
+      // A preselected Admin inside LINE reads the LINE identity without a redirect; outside LINE it waits for a tap.
+      if (lastRole === "admin" && liff.isInClient()) void connectAdminLine();
     }).catch(() => {
       clearConsumedLiffError();
       if (hasCustomerIntent()) {
@@ -187,6 +228,7 @@ export function LoginForm() {
       if (attempt !== customerAttemptGeneration.current || !hasCustomerIntent()) return;
       if (!response.ok) throw new Error(result.error || "เข้าสู่ระบบไม่สำเร็จ");
       clearCustomerIntent();
+      rememberRole("customer");
       window.location.assign(result.redirectTo || "/");
     } catch (error) {
       if (attempt === customerAttemptGeneration.current) {
@@ -262,6 +304,7 @@ export function LoginForm() {
       }
       if (!response.ok) throw new Error(result.error || "เข้าสู่ระบบไม่สำเร็จ");
       clearEmailDraft();
+      rememberRole(role);
       window.location.assign(result.redirectTo || "/");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่");
@@ -272,6 +315,7 @@ export function LoginForm() {
 
   return (
     <div>
+      {autoSigningIn && <p className="line-status line-status-connecting" role="status"><Icon name="user" size={20} /><span><strong>กำลังเข้าสู่ระบบ…</strong><small>ใช้บัญชี LINE ที่เปิดอยู่</small></span></p>}
       <div className="role-options" aria-label="ประเภทบัญชี">
         {roles.map((item) => (
           <button
@@ -352,7 +396,8 @@ export function LoginForm() {
             <div className={`line-status line-status-${lineStatus}`} role="status" aria-live="polite">
               <Icon name={lineStatus === "connected" ? "check" : "shield"} size={20} />
               <span>
-                <strong>{lineStatus === "connected" ? "เชื่อม LINE แล้ว" : lineStatus === "failed" ? lineError : "กำลังเชื่อม LINE…"}</strong>
+                <strong>{lineStatus === "connected" ? "เชื่อม LINE แล้ว" : lineStatus === "failed" ? lineError : lineStatus === "idle" ? "ยังไม่ได้เชื่อม LINE" : "กำลังเชื่อม LINE…"}</strong>
+                {lineStatus === "idle" && <button type="button" className="text-button" disabled={busy} onClick={() => void connectAdminLine()}>เชื่อม LINE</button>}
                 {lineStatus === "failed" && <button type="button" className="text-button" disabled={busy} onClick={() => void connectAdminLine()}>ลองเชื่อม LINE อีกครั้ง</button>}
                 <small>บัญชี LINE จะถูกตรวจจากระบบ LINE และต้องตรงกับบัญชีผู้ดูแลนี้</small>
               </span>
@@ -400,7 +445,7 @@ export function LogoutButton() {
         body: "{}",
       });
       if (!response.ok) throw new Error("ออกจากระบบไม่สำเร็จ กรุณาลองอีกครั้ง");
-      window.location.assign("/login");
+      window.location.assign("/login?switch=1");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "ออกจากระบบไม่สำเร็จ กรุณาลองอีกครั้ง");
       setBusy(false);

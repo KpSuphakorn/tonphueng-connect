@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { createServer } from "node:http";
-import { generateKeyPairSync, sign } from "node:crypto";
+import { createHash, generateKeyPairSync, sign } from "node:crypto";
 
 function makeLineToken() {
   const { privateKey, publicKey } = generateKeyPairSync("ec", { namedCurve: "prime256v1" });
@@ -301,4 +301,92 @@ test("protected Staff and Admin pages deny a tampered session cookie", async ({ 
 
   await page.goto("/admin");
   await expect(page.getByText("กรุณาเข้าสู่ระบบด้วยบัญชีผู้ดูแลที่เจ้าของโครงการตั้งค่าไว้")).toBeVisible();
+});
+
+test("an active session skips the picker for its role; ?switch=1 and logout keep the picker", async ({ page }) => {
+  await stubLine(page);
+  const roles = { customer: "/", staff: "/staff", admin: "/admin" } as const;
+  const hashes = new Map(Object.keys(roles).map((role) => [createHash("sha256").update(`${role}-token`).digest("hex"), { id: `${role}-id`, role, status: "active", line_subject: role === "staff" ? null : `U_${role}`, auth_user_id: role === "customer" ? null : `auth-${role}` }]));
+  const supabase = createServer((request, response) => {
+    const url = new URL(request.url ?? "/", "http://127.0.0.1:4174");
+    response.writeHead(200, { "content-type": "application/json" });
+    if (url.pathname === "/rest/v1/app_sessions") {
+      const account = hashes.get(url.searchParams.get("token_hash")?.slice(3) ?? "");
+      return response.end(JSON.stringify(account ? { expires_at: "2999-01-01T00:00:00.000Z", app_accounts: account } : null));
+    }
+    response.end("[]");
+  });
+  await new Promise<void>((resolve) => supabase.listen(4174, "127.0.0.1", resolve));
+  try {
+    for (const [role, home] of Object.entries(roles)) {
+      await page.context().clearCookies();
+      await page.context().addCookies([{ name: "tonphueng_session", value: `${role}-token`, url: "http://127.0.0.1:4173" }]);
+      await page.goto("/login");
+      await expect(page).toHaveURL(new RegExp(`127\\.0\\.0\\.1:4173${home === "/" ? "/$" : `${home}$`}`));
+    }
+    await page.context().clearCookies();
+    await page.context().addCookies([{ name: "tonphueng_session", value: "customer-token", url: "http://127.0.0.1:4173" }]);
+    await page.goto("/login?switch=1");
+    await expect(page.getByRole("button", { name: "ลูกค้า" })).toBeVisible();
+    const linePosts: string[] = [];
+    page.on("request", (request) => { if (request.url().endsWith("/api/auth/line")) linePosts.push(request.url()); });
+    await page.goto("/");
+    await page.getByRole("button", { name: "ออกจากระบบ" }).click();
+    await expect(page).toHaveURL(/\/login\?switch=1$/);
+    await expect(page.getByRole("button", { name: "ลูกค้า" })).toBeVisible();
+    await page.waitForTimeout(500);
+    expect(linePosts).toHaveLength(0);
+  } finally {
+    await new Promise<void>((resolve, reject) => supabase.close((error) => error ? reject(error) : resolve()));
+  }
+});
+
+test("a remembered Customer inside LINE signs in silently once; ?switch=1 and a remembered Staff never auto sign in", async ({ page }) => {
+  await stubLine(page);
+  let customerPosts = 0;
+  await page.route("**/api/auth/line", async (route) => { customerPosts += 1; await route.fulfill({ json: { redirectTo: "/" } }); });
+  // First visit: the normal Customer choice signs in through LINE and remembers the role on this device.
+  await page.goto("/login");
+  await page.getByRole("button", { name: "ลูกค้า" }).click();
+  await page.getByRole("button", { name: "ดำเนินการด้วย LINE" }).click();
+  await expect(page).toHaveURL(/127\.0\.0\.1:4173\/$/);
+  expect(customerPosts).toBe(1);
+  expect(await page.evaluate(() => localStorage.getItem("tonphueng-last-role"))).toBe("customer");
+  // Inside the LINE app (LIFF reports in-client) with no app session, the remembered Customer is signed in without a click.
+  // Simulate the LINE in-app browser: LIFF publishes its instance to an empty window.liff during init, so this
+  // test-only script makes that instance report in-client and already signed in to LINE (no production test hooks).
+  await page.addInitScript(() => {
+    if (!sessionStorage.getItem("simulate-line-client")) return;
+    let instance: Record<string, unknown> | undefined;
+    Object.defineProperty(window, "liff", {
+      configurable: true,
+      get: () => instance,
+      set: (value: Record<string, unknown>) => {
+        Object.assign(value, { isInClient: () => true, isLoggedIn: () => true, getIDToken: () => "playwright-in-client-id-token" });
+        instance = value;
+      },
+    });
+  });
+  await page.evaluate(() => sessionStorage.setItem("simulate-line-client", "1"));
+  await page.goto("/login");
+  await expect.poll(() => customerPosts).toBe(2);
+  await expect(page).toHaveURL(/127\.0\.0\.1:4173\/$/);
+  // Only one silent attempt per LINE window: the picker shows with Customer preselected and no further request.
+  await page.goto("/login");
+  await expect(page.getByRole("button", { name: "ลูกค้า" })).toHaveAttribute("aria-pressed", "true");
+  await page.waitForTimeout(500);
+  expect(customerPosts).toBe(2);
+  // A deliberate switch never auto signs in, even on a fresh attempt.
+  await page.evaluate(() => sessionStorage.removeItem("tonphueng-auto-login-attempted"));
+  await page.goto("/login?switch=1");
+  await expect(page.getByRole("button", { name: "ลูกค้า" })).toHaveAttribute("aria-pressed", "true");
+  await page.waitForTimeout(500);
+  expect(customerPosts).toBe(2);
+  // A remembered Staff role is only preselected.
+  await page.evaluate(() => { localStorage.setItem("tonphueng-last-role", "staff"); sessionStorage.removeItem("tonphueng-auto-login-attempted"); });
+  await page.goto("/login");
+  await expect(page.getByRole("button", { name: "ผู้ประกอบการชุมชน" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByLabel("อีเมล")).toBeVisible();
+  await page.waitForTimeout(500);
+  expect(customerPosts).toBe(2);
 });

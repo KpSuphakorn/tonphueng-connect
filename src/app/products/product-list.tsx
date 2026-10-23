@@ -55,17 +55,16 @@ export function ProductList({ serviceId, storeName, products }: { serviceId: str
     finally { setBusy(false); }
   }
 
-  return <section className="section" aria-label={`สินค้าจากร้าน ${storeName}`}>
-    {error && <p className="error-message" role="alert">{error}</p>}{notice && <p className="success-message" role="status">{notice} · <Link className="text-link" href="/cart">ดูตะกร้า</Link></p>}
+  return <section aria-label={`สินค้าจากร้าน ${storeName}`}>
+    {error && <p className="error-message sticky-message" role="alert">{error}</p>}{notice && <p className="success-message sticky-message" role="status">{notice} · <Link className="text-link" href="/cart">ดูตะกร้า</Link></p>}
     {switchCart && <section className="switch-confirmation" role="alertdialog" aria-labelledby="switch-cart-title" aria-describedby="switch-cart-copy">
       <h2 id="switch-cart-title">เปลี่ยนร้านในตะกร้า?</h2><p id="switch-cart-copy">ตะกร้าปัจจุบันมีสินค้า {switchCart.storeName} การเปลี่ยนร้านจะล้างรายการเดิม แล้วเพิ่ม {switchCart.product.name} จากร้าน {storeName}</p>
       <div className="product-form-actions"><button className="button button-primary" type="button" disabled={busy} onClick={() => void confirmSwitch()}>ล้างและเปลี่ยนร้าน</button><button className="button button-secondary" type="button" disabled={busy} onClick={() => setSwitchCart(null)}>เก็บตะกร้าเดิม</button></div>
     </section>}
     {products.length ? <ul className="public-product-list">{products.map((product) => <li className="public-product-row" key={product.id}>
       <img src={product.photo_url} alt={`รูป ${product.name}`} loading="lazy" />
-      <div className="public-product-copy"><h2>{product.name}</h2>{product.description && <p>{product.description}</p>}<strong>{money(product.price_satang)}</strong>
-        <div className="product-add-row"><label className="field">จำนวน<input aria-label={`จำนวน ${product.name}`} inputMode="numeric" type="number" min="1" max="99" value={quantities[product.id] ?? "1"} onChange={(event) => setQuantities((current) => ({ ...current, [product.id]: event.target.value }))} /></label><button type="button" className="button button-primary" disabled={busy} onClick={() => void add(product)}>เพิ่มลงตะกร้า</button></div>
-      </div>
+      <div className="public-product-copy"><h2>{product.name}</h2>{product.description && <p>{product.description}</p>}<strong>{money(product.price_satang)}</strong></div>
+      <div className="product-add-row"><label className="field">จำนวน<input aria-label={`จำนวน ${product.name}`} inputMode="numeric" type="number" min="1" max="99" value={quantities[product.id] ?? "1"} onChange={(event) => setQuantities((current) => ({ ...current, [product.id]: event.target.value }))} /></label><button type="button" className="button button-primary" disabled={busy} onClick={() => void add(product)}>เพิ่มลงตะกร้า</button></div>
     </li>)}</ul> : <p className="note-card">ร้านนี้ยังไม่มีสินค้าให้เลือก</p>}
   </section>;
 }

@@ -1,8 +1,11 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAccountFromCookies } from "../../../lib/auth";
 import { getPackageBooking } from "../../../lib/packages";
 import { BookingPayment } from "./booking-payment";
+
+import { AppHeader } from "../../components/app-header";
+import { BottomNav } from "../../components/bottom-nav";
+import { Icon } from "../../components/icons";
 
 export const dynamic = "force-dynamic";
 const baht = (satang: number) => new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(satang / 100);
@@ -14,21 +17,31 @@ export default async function BookingPage({ params }: { params: Promise<{ bookin
   if (!account || account.status !== "active" || !["customer", "admin"].includes(account.role)) notFound();
   let booking;
   try { booking = await getPackageBooking(bookingId, account.role === "customer" ? account.id : undefined); }
-  catch { return <main className="page-wrap"><p className="error-message">โหลดรายการจองไม่สำเร็จ</p></main>; }
+  catch { return <main className="page-wrap no-nav"><AppHeader /><p className="error-message" role="alert">โหลดรายการจองไม่สำเร็จ</p></main>; }
   if (!booking) notFound();
   const snapshot = booking.package_snapshot as { package_title?: string; sub_package_title?: string; duration_days?: number; choices?: Array<{ slot_name?: string; service?: { name?: string; address?: string } }> };
-  return <main className="page-wrap">
-    <header className="topbar"><Link href={account.role === "admin" ? "/admin/bookings" : "/my-trip"} className="top-link">← กลับ</Link><Link href="/" className="brand">ผึ้งพาเดิน · รายละเอียดการจอง</Link></header>
-    <p className="eyebrow">BOOKING · {booking.status === "paid_simulated" ? "ชำระเงินแล้ว" : "รอยืนยัน"}</p>
-    <h1>{snapshot.sub_package_title || "Sub Package"}</h1><p className="lead">{snapshot.package_title} · รายการจองเก็บข้อมูลแพ็กเกจและบริการ ณ วันที่สร้าง</p>
-    <section className="booking-summary">
-      <p><strong>วันเริ่มทริป:</strong> {booking.start_date} · <strong>วันสิ้นสุด:</strong> {booking.end_date} ({snapshot.duration_days ?? 1} วัน)</p>
-      <p><strong>ผู้เข้าร่วม:</strong> {booking.participants} คน</p>
-      <p><strong>ราคาต่อคน:</strong> {baht(booking.price_per_person_satang)}</p>
-      <p><strong>ยอดรวมจากระบบ:</strong> {baht(booking.total_price_satang)}</p>
+  const isCustomer = account.role === "customer";
+  const paid = booking.status === "paid_simulated";
+  return <main className={isCustomer ? "page-wrap" : "page-wrap no-nav"}>
+    <AppHeader back={isCustomer ? { href: "/my-trip", label: "My Trip" } : { href: "/admin/bookings", label: "รายการจอง" }} />
+    <div className="page-intro">
+      <span className={`status-badge ${paid ? "status-delivered" : "status-pending"}`}>{paid ? "ชำระเงินแล้ว" : "รอยืนยัน"}</span>
+      <h1>{snapshot.sub_package_title || "แพ็กเกจ"}</h1>
+      <p className="lead">{snapshot.package_title} · รายการจองเก็บข้อมูลแพ็กเกจและบริการ ณ วันที่สร้าง</p>
+    </div>
+    <section className="booking-summary" aria-labelledby="booking-summary-heading">
+      <h2 id="booking-summary-heading" className="visually-hidden">สรุปรายการจอง</h2>
+      <div className="summary-rows">
+        <p><strong>วันเริ่มทริป</strong> <span>{booking.start_date}</span></p>
+        <p><strong>วันสิ้นสุด</strong> <span>{booking.end_date} ({snapshot.duration_days ?? 1} วัน)</span></p>
+        <p><strong>ผู้เข้าร่วม</strong> <span>{booking.participants} คน</span></p>
+        <p><strong>ราคาต่อคน</strong> <span>{baht(booking.price_per_person_satang)}</span></p>
+        <p className="summary-total"><strong>ยอดรวมจากระบบ</strong> <span>{baht(booking.total_price_satang)}</span></p>
+      </div>
       <h2>ตัวเลือกที่จอง</h2>
-      <ul>{(snapshot.choices ?? []).map((choice, index) => <li key={`${choice.slot_name}-${index}`}><strong>{choice.slot_name}:</strong> {choice.service?.name} — {choice.service?.address}</li>)}</ul>
+      <ul className="place-list">{(snapshot.choices ?? []).map((choice, index) => <li key={`${choice.slot_name}-${index}`}><Icon name="pin" size={18} /><span><strong>{choice.slot_name}:</strong> {choice.service?.name}<small>{choice.service?.address}</small></span></li>)}</ul>
     </section>
-    {account.role === "customer" && <BookingPayment booking={booking} />}
+    {isCustomer && <BookingPayment booking={booking} />}
+    {isCustomer && <BottomNav />}
   </main>;
 }

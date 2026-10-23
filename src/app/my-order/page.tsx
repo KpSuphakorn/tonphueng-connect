@@ -2,6 +2,10 @@ import Link from "next/link";
 import { getAccountFromCookies } from "../../lib/auth";
 import { listCustomerOrders, type OrderStatus, type ProductOrder } from "../../lib/orders";
 
+import { AppHeader } from "../components/app-header";
+import { BottomNav } from "../components/bottom-nav";
+import { Icon } from "../components/icons";
+
 export const dynamic = "force-dynamic";
 const baht = (satang: number) => new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(satang / 100);
 const TABS = [
@@ -35,14 +39,10 @@ export default async function MyOrderPage({ searchParams }: { searchParams: Prom
   const shown = orders.filter((order) => (tab.statuses as readonly OrderStatus[]).includes(order.status));
   return (
     <main className="page-wrap">
-      <header className="topbar">
-        <Link href="/" className="brand"><span className="brand-mark" aria-hidden="true">ผ</span> ผึ้งพาเดิน</Link>
-        {isCustomer ? <Link href="/cart" className="top-link">ตะกร้า</Link> : <Link href="/login" className="top-link">เข้าสู่ระบบ</Link>}
-      </header>
-      <p className="eyebrow">MY ORDER</p>
+      <AppHeader>{isCustomer ? <Link href="/cart" className="top-link"><Icon name="cart" size={18} />ตะกร้า</Link> : <Link href="/login" className="top-link">เข้าสู่ระบบ</Link>}</AppHeader>
       <h1>My Order</h1>
       {!isCustomer ? (
-        <section className="section note-card"><strong>เข้าสู่ระบบด้วย LINE เพื่อดู My Order</strong><p style={{ margin: "6px 0 0" }}>คำสั่งซื้อจะแสดงเฉพาะบัญชีลูกค้าของคุณ</p><Link href="/login" className="button button-primary" style={{ marginTop: 14 }}>เข้าสู่ระบบ</Link></section>
+        <section className="section note-card"><strong>เข้าสู่ระบบด้วย LINE เพื่อดู My Order</strong><p>คำสั่งซื้อจะแสดงเฉพาะบัญชีลูกค้าของคุณ</p><Link href="/login" className="button button-primary">เข้าสู่ระบบ</Link></section>
       ) : failed ? (
         <p className="error-message" role="alert">โหลดคำสั่งซื้อไม่สำเร็จ กรุณาลองใหม่</p>
       ) : (
@@ -54,26 +54,26 @@ export default async function MyOrderPage({ searchParams }: { searchParams: Prom
             })}
           </nav>
           {!shown.length ? (
-            <section className="section note-card"><strong>{orders.length ? `ไม่มีคำสั่งซื้อในแท็บ “${tab.label}”` : "ยังไม่มีคำสั่งซื้อ"}</strong><p style={{ margin: "6px 0 0" }}>เลือกสินค้าชุมชนลงตะกร้า แล้วสั่งซื้อและชำระเงินได้</p><Link href="/products" className="button button-primary" style={{ marginTop: 14 }}>เลือกร้านสินค้า</Link></section>
+            <section className="note-card"><strong>{orders.length ? `ไม่มีคำสั่งซื้อในแท็บ “${tab.label}”` : "ยังไม่มีคำสั่งซื้อ"}</strong><p>เลือกสินค้าชุมชนลงตะกร้า แล้วสั่งซื้อและชำระเงินได้</p><Link href="/products" className="button button-primary">เลือกร้านสินค้า</Link></section>
           ) : (
-            <section className="section" aria-label={`คำสั่งซื้อ: ${tab.label}`}>
+            <section className="order-list" aria-label={`คำสั่งซื้อ: ${tab.label}`}>
               {shown.map((order) => <article className="booking-summary" key={order.id}>
                 <p className="order-card-head"><span className={`status-badge status-${order.status}`}>{badge(order)}</span>{order.payment_status === "paid_simulated" && <span className="status-badge status-paid-demo">ชำระเงินแล้ว</span>}</p>
-                <h2>{order.store_name}</h2>
-                <p>{order.items.map((item) => `${item.product_name} × ${item.quantity}`).join(", ")}</p>
-                <p><strong>ยอดรวม:</strong> {baht(order.total_satang)} · {order.fulfillment === "delivery" ? "จัดส่ง" : "รับที่ร้าน"}</p>
-                {order.tracking_number && <p><strong>เลขพัสดุ:</strong> {order.tracking_number}</p>}
-                {order.payment_status === "pending_simulated"
-                  ? <Link className="button button-primary" href={`/orders/${order.id}`}>ไปชำระเงิน</Link>
-                  : <Link className="text-link" href={`/orders/${order.id}`}>ดูรายละเอียดคำสั่งซื้อ</Link>}
+                <h2 className="order-card-title">{order.store_name}</h2>
+                <p className="order-card-items">{order.items.map((item) => `${item.product_name} × ${item.quantity}`).join(", ")}</p>
+                {order.tracking_number && <p className="meta-line">เลขพัสดุ: <strong>{order.tracking_number}</strong></p>}
+                <div className="order-card-foot">
+                  <p><span className="order-total">{baht(order.total_satang)}</span> <span className="form-help">· {order.fulfillment === "delivery" ? "จัดส่ง" : "รับที่ร้าน"}</span></p>
+                  {order.payment_status === "pending_simulated"
+                    ? <Link className="button button-primary" href={`/orders/${order.id}`}>ไปชำระเงิน</Link>
+                    : <Link className="text-link" href={`/orders/${order.id}`}>ดูรายละเอียดคำสั่งซื้อ</Link>}
+                </div>
               </article>)}
             </section>
           )}
         </>
       )}
-      <nav className="bottom-nav" aria-label="เมนูลูกค้า">
-        <Link href="/">หน้าหลัก</Link><Link href="/my-trip">My Trip</Link><Link href="/my-order" aria-current="page">My Order</Link>
-      </nav>
+      <BottomNav current="order" />
     </main>
   );
 }

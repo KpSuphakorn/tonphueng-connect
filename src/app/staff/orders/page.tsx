@@ -3,6 +3,7 @@ import { getAccountFromCookies } from "../../../lib/auth";
 import { listStaffOrders, ORDER_STATUS_LABELS, STAFF_ORDER_STATUSES } from "../../../lib/orders";
 import { LogoutButton } from "../../login/login-form";
 import { OrderStatusForm } from "./order-status-form";
+import { AppHeader } from "../../components/app-header";
 
 export const dynamic = "force-dynamic";
 const baht = (satang: number) => new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(satang / 100);
@@ -10,12 +11,12 @@ const dateTime = (value: string | null) => value ? new Intl.DateTimeFormat("th-T
 
 export default async function StaffOrdersPage() {
   const account = await getAccountFromCookies();
-  if (!account || account.role !== "staff" || account.status !== "active") return <main className="page-wrap"><section className="protected-card"><h1>คำสั่งซื้อของร้าน</h1><p>บัญชีนี้ยังไม่มีสิทธิ์ Staff ที่อนุมัติแล้ว</p><Link href="/login" className="button button-primary">เข้าสู่ระบบ</Link></section></main>;
+  if (!account || account.role !== "staff" || account.status !== "active") return <main className="page-wrap no-nav"><section className="protected-card"><h1>คำสั่งซื้อของร้าน</h1><p>บัญชีนี้ยังไม่มีสิทธิ์ Staff ที่อนุมัติแล้ว</p><Link href="/login" className="button button-primary">เข้าสู่ระบบ</Link></section></main>;
   let orders: Awaited<ReturnType<typeof listStaffOrders>> = null;
   let failed = false;
   try { orders = await listStaffOrders(account.id); } catch { failed = true; }
-  return <main className="page-wrap">
-    <header className="topbar"><Link href="/staff" className="brand"><span className="brand-mark" aria-hidden="true">ผ</span> ผึ้งพาเดิน · ผู้ประกอบการ</Link><LogoutButton /></header>
+  return <main className="page-wrap no-nav">
+    <AppHeader brandHref="/staff" area="ผู้ประกอบการ"><LogoutButton /></AppHeader>
     <h1>คำสั่งซื้อของร้าน</h1>
     <p className="lead">แสดงเฉพาะคำสั่งซื้อของร้านคุณที่ลูกค้าชำระเงินแล้ว อัปเดตสถานะเพื่อให้ลูกค้าติดตามใน My Order</p>
     {failed ? <p className="error-message" role="alert">โหลดคำสั่งซื้อไม่สำเร็จ กรุณาลองใหม่</p>

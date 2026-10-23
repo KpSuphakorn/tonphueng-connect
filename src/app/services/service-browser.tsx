@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PublicService, ServiceCategory } from "../../lib/services";
+import { Icon } from "../components/icons";
 
 const categories: [ServiceCategory, string][] = [
   ["community_product", "สินค้าชุมชน"], ["accommodation", "ที่พัก"], ["restaurant", "ร้านอาหาร"],
@@ -72,22 +73,23 @@ export function ServiceBrowser() {
     );
   }
 
-  return <section className="section" aria-label="รายการบริการ">
+  return <section aria-label="รายการบริการ">
     <div className="service-filters">
       <label className="field">ประเภทบริการ<select value={category} onChange={(event) => { setServices([]); setOffset(0); setHasMore(true); setCategory(event.target.value as ServiceCategory | "all"); }}>
         <option value="all">ทุกประเภท</option>
         {categories.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
       </select></label>
-      <div><button className="button button-secondary" type="button" onClick={requestLocation}>เรียงตามระยะใกล้</button><p className="form-help" role="status">{locationMessage} · ระยะเส้นตรงโดยประมาณ ไม่ใช่ระยะเดินทาง</p></div>
+      <button className="button button-secondary" type="button" onClick={requestLocation}><Icon name="location" size={20} />เรียงตามระยะใกล้</button>
+      <p className="form-help" role="status">{locationMessage} · ระยะเส้นตรงโดยประมาณ ไม่ใช่ระยะเดินทาง</p>
     </div>
     {error && <p className="error-message" role="alert">{error} <button className="text-button" onClick={() => void load(true)}>ลองอีกครั้ง</button></p>}
     {services.length ? <div className="service-grid">{services.map((service) => <Link className="service-card" href={`/services/${service.id}`} key={service.id}>
-      {service.photos[0] ? <img src={service.photos[0]} alt={`รูป ${service.name}`} loading="lazy" /> : <div className="service-image-placeholder" aria-hidden="true">ผึ้งพาเดิน</div>}
-      <div className="service-card-copy"><span className="availability">{categories.find(([value]) => value === service.category)?.[1]}{service.other_category ? ` · ${service.other_category}` : ""}</span><h2>{service.name}</h2><p>{service.address}</p></div>
+      {service.photos[0] ? <img src={service.photos[0]} alt={`รูป ${service.name}`} loading="lazy" /> : <div className="service-image-placeholder" aria-hidden="true"><Icon name="leaf" size={36} /></div>}
+      <div className="service-card-copy"><span className="chip">{categories.find(([value]) => value === service.category)?.[1]}{service.other_category ? ` · ${service.other_category}` : ""}</span><h2>{service.name}</h2><p>{service.address}</p></div>
     </Link>)}</div> : !busy && !error ? <section className="note-card" aria-live="polite">ยังไม่มีบริการในหมวดนี้</section> : null}
     <div ref={sentinel} aria-hidden="true" />
-    {busy && <p className="form-help" role="status">กำลังโหลดบริการ…</p>}
+    {busy && <p className="list-status" role="status">กำลังโหลดบริการ…</p>}
     {!busy && hasMore && services.length > 0 && <button className="button button-secondary button-wide" onClick={() => void load()}>โหลดเพิ่มเติม</button>}
-    {!hasMore && services.length > 0 && <p className="form-help" role="status">แสดงบริการครบแล้ว</p>}
+    {!hasMore && services.length > 0 && <p className="list-status" role="status">แสดงบริการครบแล้ว</p>}
   </section>;
 }

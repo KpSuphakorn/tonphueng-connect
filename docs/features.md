@@ -21,7 +21,7 @@ Next.js และ TypeScript แอปเดียว ใช้ Supabase Auth, P
 | --- | --- |
 | Customer | LIFF ID token ถูกตรวจบน server ก่อนสร้าง/ค้นบัญชี LINE และออก application session |
 | Staff | อีเมล/รหัสผ่านผ่าน Supabase Auth; สถานะ `pending` หรือ `disabled` ไม่ได้รับสิทธิ์ Staff |
-| Admin | อีเมล/รหัสผ่านร่วมกับ LINE ที่ตรวจแล้ว; Admin ที่ยังรอ (รวม Admin เริ่มต้น) ต้องยืนยันรับสิทธิ์ก่อนผูก LINE ครั้งแรกได้ครั้งเดียว และครั้งต่อไปต้องตรงบัญชี (Ticket 08) |
+| Admin | อีเมล/รหัสผ่านร่วมกับ LINE ที่ตรวจแล้ว (เลือกบทบาท Admin แล้วหน้าเข้าสู่ระบบขอ LINE ID token อัตโนมัติ: ใน LINE อ่านทันที นอก LINE ผ่าน LINE login แล้วกลับมาพร้อมบทบาทเดิม มีปุ่มลองใหม่เมื่อไม่สำเร็จ); Admin ที่ยังรอ (รวม Admin เริ่มต้น) ต้องยืนยันรับสิทธิ์ก่อนผูก LINE ครั้งแรกได้ครั้งเดียว และครั้งต่อไปต้องตรงบัญชี (Ticket 08) |
 | Session/logout | cookie แบบ HttpOnly; ฐานข้อมูลเก็บ hash ของ token อายุ 14 วัน; logout เพิกถอน session |
 | หน้าลูกค้า | `/services` ค้นหาและบันทึกสถานที่ได้; `/my-trip` แสดงรายการที่บันทึกเอง; `/my-order` แสดงคำสั่งซื้อของบัญชีตาม Ticket 07 |
 
@@ -119,6 +119,8 @@ Admin ที่ active (ผูก LINE แล้ว) เพิ่มผู้ด
 UI refinement และ CORS สำหรับ storypage ถูก release พร้อม `c4063d6`; Vercel deployment ผ่านและ endpoint production ที่เกี่ยวข้องตรวจตรงแล้ว (รายละเอียด Ticket 03). หน้าสินค้า/ตะกร้าของ Ticket 06 ใช้ migration 007 ที่ apply แล้ว; ยังรอ hosted workflow acceptance.
 
 Tickets 01–08 มี implementation แล้ว (ดูสถานะแยกใน ticket เดิม); Tickets 07–08 apply migrations 008–009 แล้ว; Ticket 06 migrate แล้ว และ live checks ที่ยังค้างแยกไว้ในรายงาน ส่วน Ticket 03 UI/CORS release `c4063d6` ผ่าน production verification.
+
+Visual pass: ระบบหน้าตาตาม [DESIGN.md](../DESIGN.md) — เขียวป่า/กระดาษครีม/เหลืองน้ำผึ้ง ฟอนต์ IBM Plex Sans Thai + Mitr ผ่าน `next/font`, โลโก้ผึ้งพาเดินและภาพ hero/การ์ดหน้าหลักใน `public/images/` (เครดิตอยู่หน้า `/credits`); `src/app/components/` มี `BottomNav`, `AppHeader`/`Brand` และไอคอน SVG ที่ใช้ร่วมกัน ปุ่มหลัก (สั่งซื้อ, ตรวจราคาและไปหน้าชำระเงิน, บันทึกเข้า My Trip) ติดค้างเหนือแถบเมนูขณะเลื่อน; ไม่เปลี่ยน API ข้อมูล หรือกฎธุรกิจ
 
 ## งานที่ยังไม่พัฒนา
 

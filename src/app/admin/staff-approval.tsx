@@ -51,11 +51,11 @@ export function StaffApproval({ applicants }: { applicants: Applicant[] }) {
     }
   }
 
-  if (!applicants.length) return <section className="note-card" role="status"><strong>ไม่มีผู้สมัครที่รออนุมัติ</strong><p style={{ margin: "6px 0 0" }}>รายการจะแสดงเมื่อมีผู้ประกอบการส่งข้อมูลสมัคร</p></section>;
+  if (!applicants.length) return <section className="note-card" role="status"><strong>ไม่มีผู้สมัครที่รออนุมัติ</strong><p>รายการจะแสดงเมื่อมีผู้ประกอบการส่งข้อมูลสมัคร</p></section>;
 
   return <section className="approval-list" aria-label="ผู้สมัครที่รออนุมัติ">
     {applicants.map((applicant) => <article className="applicant-card" key={applicant.accountId}>
-      <div className="applicant-heading"><div><p className="eyebrow">รออนุมัติ</p><h2>{applicant.name}</h2></div>
+      <div className="applicant-heading"><div><span className="status-badge status-pending">รออนุมัติ</span><h2>{applicant.name}</h2></div>
         <button className="button button-primary" type="button" disabled={busyId !== ""} onClick={() => approve(applicant.accountId)}>
           {busyId === applicant.accountId ? "กำลังอนุมัติ…" : "อนุมัติผู้ประกอบการ"}
         </button>

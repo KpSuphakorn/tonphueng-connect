@@ -169,12 +169,9 @@ test("a pending Admin sees an explicit acceptance step and resubmits with the ac
     return route.fulfill({ json: { role: "admin", redirectTo: "/login?accepted=1" } });
   });
   await page.goto("/login");
+  // Choosing Admin connects LINE automatically (LINE login round trip, then the role is preselected).
   await page.getByRole("button", { name: "ผู้ดูแลโครงการ" }).click();
-  await page.getByRole("button", { name: "ยืนยันบัญชี LINE ที่ผูกไว้" }).click();
-  await page.waitForURL(/code=playwright-code|\/login/);
-  await page.getByRole("button", { name: "ผู้ดูแลโครงการ" }).click();
-  await page.getByRole("button", { name: "ยืนยันบัญชี LINE ที่ผูกไว้" }).click();
-  await expect(page.getByRole("button", { name: "ยืนยัน LINE แล้ว" })).toBeVisible();
+  await expect(page.getByText("เชื่อม LINE แล้ว", { exact: true })).toBeVisible();
   await page.getByLabel("อีเมล").fill("new@example.test");
   await page.getByLabel("รหัสผ่าน").fill("initial-password");
   await page.getByRole("button", { name: "เข้าสู่ระบบ", exact: true }).click();

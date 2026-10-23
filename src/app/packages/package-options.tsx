@@ -68,7 +68,7 @@ export function PackageOptions({ packageView, canSelect, savedSelection }: { pac
   })));
   return (
     <section className="package-options" aria-labelledby="package-options-title">
-      <div className="section-heading"><div><p className="eyebrow">ตัวเลือกตามจำนวนที่กำหนด</p><h2 id="package-options-title">จัดตัวเลือกในแพ็กเกจ</h2></div></div>
+      <div className="section-heading"><h2 id="package-options-title">จัดตัวเลือกในแพ็กเกจ</h2><p>ตัวเลือกตามจำนวนที่กำหนด</p></div>
       {packageView.slots.map((slot) => {
         const selected = choices[slot.id] ?? [];
         return <fieldset className="package-slot" key={slot.id}>
@@ -89,12 +89,12 @@ export function PackageOptions({ packageView, canSelect, savedSelection }: { pac
         </fieldset>;
       })}
       {savedNeedsReview && <p className="form-help" role="status">ตัวเลือกหรือแพ็กเกจเดิมเปลี่ยนไปแล้ว กรุณาตรวจสอบและบันทึกตัวเลือกปัจจุบันอีกครั้ง</p>}
-      {canSelect ? <button className="button button-primary" type="button" disabled={busy || !complete || packageView.revision < 1} onClick={() => void save()}>{busy ? "กำลังบันทึก…" : savedSelection ? "บันทึกการแก้ไขตัวเลือก" : "บันทึกตัวเลือก"}</button> : <Link className="button button-primary" href="/login">เข้าสู่ระบบเพื่อเลือก</Link>}
+      {canSelect ? <button className="button button-secondary" type="button" disabled={busy || !complete || packageView.revision < 1} onClick={() => void save()}>{busy ? "กำลังบันทึก…" : savedSelection ? "บันทึกการแก้ไขตัวเลือก" : "บันทึกตัวเลือก"}</button> : <Link className="button button-primary" href="/login">เข้าสู่ระบบเพื่อเลือก</Link>}
       {canSelect && complete && packageView.revision > 0 && <div className="booking-fields">
         <label className="field"><span>วันเริ่มทริป <span className="required-marker" aria-hidden="true">*</span></span><input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} required disabled={busy} min={new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date())} /></label>
         <label className="field"><span>จำนวนผู้เข้าร่วม <span className="required-marker" aria-hidden="true">*</span></span><input type="number" min="1" max="100" step="1" value={participants} onChange={(event) => setParticipants(Number(event.target.value))} required disabled={busy} /></label>
         <p className="form-help">ระบุ 1–100 คน และเลือกวันที่ในอนาคต</p>
-        <button className="button button-primary" type="button" disabled={busy || !startDate || participants < 1 || participants > 100} onClick={() => void createBooking()}>{busy ? "กำลังตรวจสอบราคา…" : "ตรวจราคาและไปหน้าชำระเงิน"}</button>
+        <div className="action-bar"><button className="button button-primary" type="button" disabled={busy || !startDate || participants < 1 || participants > 100} onClick={() => void createBooking()}>{busy ? "กำลังตรวจสอบราคา…" : "ตรวจราคาและไปหน้าชำระเงิน"}</button></div>
       </div>}
       {message && <p className={message.startsWith("บันทึกตัวเลือกแล้ว") ? "success-message" : "error-message"} role="status">{message}</p>}
     </section>

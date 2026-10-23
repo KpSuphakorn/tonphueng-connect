@@ -2,45 +2,55 @@
 
 import liff from "@line/liff";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { Icon, type IconName } from "../components/icons";
 
 type Role = "customer" | "staff" | "admin";
 
-const roles: Array<{ id: Role; title: string; subtitle: string }> = [
-  { id: "customer", title: "ลูกค้า", subtitle: "เข้าสู่ระบบด้วยบัญชี LINE" },
-  { id: "staff", title: "ผู้ประกอบการชุมชน", subtitle: "เข้าสู่ระบบด้วยอีเมลและรหัสผ่าน" },
-  { id: "admin", title: "ผู้ดูแลโครงการ", subtitle: "อีเมล รหัสผ่าน และ LINE ที่ผูกกับบัญชี" },
+const roles: Array<{ id: Role; title: string; subtitle: string; icon: IconName }> = [
+  { id: "customer", title: "ลูกค้า", subtitle: "เข้าสู่ระบบด้วยบัญชี LINE", icon: "user" },
+  { id: "staff", title: "ผู้ประกอบการชุมชน", subtitle: "เข้าสู่ระบบด้วยอีเมลและรหัสผ่าน", icon: "store" },
+  { id: "admin", title: "ผู้ดูแลโครงการ", subtitle: "อีเมล รหัสผ่าน และ LINE ที่ผูกกับบัญชี", icon: "shield" },
 ];
 
 type LoginReply = { error?: string; redirectTo?: string; code?: string };
+type LineStatus = "idle" | "connecting" | "connected" | "failed";
 const customerIntentKey = "tonphueng-login-intent";
-const customerIntentLifetimeMs = 5 * 60 * 1000;
+/** Survives the LINE login redirect so the Admin form comes back preselected and continues connecting LINE. */
+const adminIntentKey = "tonphueng-admin-login-intent";
+const intentLifetimeMs = 5 * 60 * 1000;
 let liffInitialization: Promise<void> | undefined;
 
-function hasCustomerIntent() {
+function hasIntent(key: string) {
   try {
-    const value = sessionStorage.getItem(customerIntentKey);
+    const value = sessionStorage.getItem(key);
     if (!value) return false;
     const intent = JSON.parse(value) as { expiresAt?: unknown };
     if (typeof intent.expiresAt === "number" && intent.expiresAt > Date.now()) return true;
-    sessionStorage.removeItem(customerIntentKey);
+    sessionStorage.removeItem(key);
   } catch {
-    try { sessionStorage.removeItem(customerIntentKey); } catch { /* Storage may be unavailable. */ }
+    try { sessionStorage.removeItem(key); } catch { /* Storage may be unavailable. */ }
   }
   return false;
 }
 
-function saveCustomerIntent() {
+function saveIntent(key: string) {
   try {
-    sessionStorage.setItem(customerIntentKey, JSON.stringify({ expiresAt: Date.now() + customerIntentLifetimeMs }));
+    sessionStorage.setItem(key, JSON.stringify({ expiresAt: Date.now() + intentLifetimeMs }));
     return true;
   } catch {
     return false;
   }
 }
 
-function clearCustomerIntent() {
-  try { sessionStorage.removeItem(customerIntentKey); } catch { /* Storage may be unavailable. */ }
+function clearIntent(key: string) {
+  try { sessionStorage.removeItem(key); } catch { /* Storage may be unavailable. */ }
 }
+
+const hasCustomerIntent = () => hasIntent(customerIntentKey);
+const saveCustomerIntent = () => saveIntent(customerIntentKey);
+const clearCustomerIntent = () => clearIntent(customerIntentKey);
+const hasAdminIntent = () => hasIntent(adminIntentKey);
+const clearAdminIntent = () => clearIntent(adminIntentKey);
 
 function clearConsumedLiffError() {
   const url = new URL(window.location.href);
@@ -70,6 +80,8 @@ export function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [lineIdToken, setLineIdToken] = useState("");
+  const [lineStatus, setLineStatus] = useState<LineStatus>("idle");
+  const [lineError, setLineError] = useState("");
   const [acceptanceRequired, setAcceptanceRequired] = useState(false);
   const [acceptAdminRole, setAcceptAdminRole] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -77,10 +89,14 @@ export function LoginForm() {
   const customerSignInStarted = useRef(false);
   const customerAttemptGeneration = useRef(0);
   const callbackResumed = useRef(false);
+  const adminAttemptGeneration = useRef(0);
+  const adminResumed = useRef(false);
 
   useEffect(() => {
     const resumingCustomer = hasCustomerIntent();
     if (resumingCustomer) setRole("customer");
+    const resumingAdmin = !resumingCustomer && hasAdminIntent();
+    if (resumingAdmin) { setRole("admin"); setLineStatus("connecting"); }
     const handlePageShow = (event: PageTransitionEvent) => {
       if (!event.persisted) return;
       customerAttemptGeneration.current += 1;
@@ -91,9 +107,21 @@ export function LoginForm() {
         setRole("customer");
         setMessage("การเข้าสู่ระบบ LINE ถูกยกเลิก กรุณากดดำเนินการด้วย LINE อีกครั้ง");
       }
+      if (hasAdminIntent()) {
+        adminAttemptGeneration.current += 1;
+        clearAdminIntent();
+        setRole("admin");
+        setLineStatus("failed");
+        setLineError("การเชื่อม LINE ถูกยกเลิก");
+      }
     };
     window.addEventListener("pageshow", handlePageShow);
     void initializeLiff().then(() => {
+      if (hasAdminIntent() && !adminResumed.current) {
+        adminResumed.current = true;
+        void connectAdminLine(true);
+        return;
+      }
       if (!hasCustomerIntent() || callbackResumed.current) return;
       callbackResumed.current = true;
       setRole("customer");
@@ -104,6 +132,12 @@ export function LoginForm() {
         clearCustomerIntent();
         setRole("customer");
         setMessage("เชื่อมต่อ LINE ไม่สำเร็จ กรุณากดดำเนินการด้วย LINE อีกครั้ง");
+      }
+      if (hasAdminIntent()) {
+        clearAdminIntent();
+        setRole("admin");
+        setLineStatus("failed");
+        setLineError("เชื่อมต่อ LINE ไม่สำเร็จ");
       }
     });
     return () => window.removeEventListener("pageshow", handlePageShow);
@@ -164,18 +198,37 @@ export function LoginForm() {
     }
   }
 
-  async function connectAdminLine() {
-    setBusy(true);
-    setMessage("");
+  /** Admin identity comes from LIFF automatically: inside LINE the ID token is read at once; outside LINE the page goes
+   * through LINE login and returns here with the Admin role preselected. The server still verifies and binds it. */
+  async function connectAdminLine(resuming = false) {
+    const attempt = ++adminAttemptGeneration.current;
+    setLineIdToken("");
+    setLineStatus("connecting");
+    setLineError("");
+    if (!resuming && !saveIntent(adminIntentKey)) {
+      setLineStatus("failed");
+      setLineError("ไม่สามารถบันทึกการเข้าสู่ระบบชั่วคราวได้ กรุณาเปิดใช้ session storage");
+      return;
+    }
     try {
-      const token = await getLineToken();
-      if (!token) return;
+      await initializeLiff();
+      if (attempt !== adminAttemptGeneration.current) return;
+      if (!liff.isLoggedIn()) {
+        if (resuming) throw new Error("ยังไม่ได้เข้าสู่ระบบ LINE การยืนยันอาจถูกยกเลิก");
+        if (liff.isInClient()) throw new Error("ยังไม่พบการเข้าสู่ระบบ LINE กรุณาปิดแล้วเปิด LIFF จาก LINE อีกครั้ง");
+        liff.login({ redirectUri: window.location.href });
+        return;
+      }
+      const token = liff.getIDToken();
+      if (!token) throw new Error("ไม่พบ LINE ID token กรุณาเปิดแอปจาก LINE แล้วลองใหม่");
+      clearAdminIntent();
       setLineIdToken(token);
-      setMessage("ยืนยัน LINE แล้ว กรุณากดเข้าสู่ระบบเพื่อไปต่อ");
+      setLineStatus("connected");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "ยืนยัน LINE ไม่สำเร็จ กรุณาลองใหม่");
-    } finally {
-      setBusy(false);
+      if (attempt !== adminAttemptGeneration.current) return;
+      clearAdminIntent();
+      setLineStatus("failed");
+      setLineError(error instanceof Error ? error.message : "เชื่อม LINE ไม่สำเร็จ");
     }
   }
 
@@ -229,18 +282,24 @@ export function LoginForm() {
                 customerSignInStarted.current = false;
                 clearCustomerIntent();
               }
+              adminAttemptGeneration.current += 1;
+              clearAdminIntent();
               setRole(item.id);
               setMessage("");
               setLineIdToken("");
+              setLineStatus("idle");
+              setLineError("");
               setAcceptanceRequired(false);
               setAcceptAdminRole(false);
+              if (item.id === "admin") void connectAdminLine();
             }}
           >
+            <span className="role-icon"><Icon name={item.icon} /></span>
             <span>
-              <span className="role-title" style={{ display: "block" }}>{item.title}</span>
+              <span className="role-title">{item.title}</span>
               <span className="role-subtitle">{item.subtitle}</span>
             </span>
-            <span aria-hidden="true">{role === item.id ? "✓" : "›"}</span>
+            <Icon name={role === item.id ? "check" : "chevronRight"} />
           </button>
         ))}
       </div>
@@ -268,6 +327,7 @@ export function LoginForm() {
               type="email"
               name="email"
               autoComplete="username"
+              disabled={role === "admin" && lineStatus === "connecting"}
               required
               maxLength={254}
               value={email}
@@ -280,6 +340,7 @@ export function LoginForm() {
               type="password"
               name="password"
               autoComplete="current-password"
+              disabled={role === "admin" && lineStatus === "connecting"}
               required
               maxLength={512}
               value={password}
@@ -287,12 +348,14 @@ export function LoginForm() {
             />
           </label>
           {role === "admin" && (
-            <>
-              <button className="button button-secondary button-wide" type="button" disabled={busy} onClick={connectAdminLine}>
-                {lineIdToken ? "ยืนยัน LINE แล้ว" : "ยืนยันบัญชี LINE ที่ผูกไว้"}
-              </button>
-              <p className="form-help">บัญชี LINE จะถูกตรวจจากระบบ LINE และต้องตรงกับบัญชีผู้ดูแลนี้</p>
-            </>
+            <div className={`line-status line-status-${lineStatus}`} role="status" aria-live="polite">
+              <Icon name={lineStatus === "connected" ? "check" : "shield"} size={20} />
+              <span>
+                <strong>{lineStatus === "connected" ? "เชื่อม LINE แล้ว" : lineStatus === "failed" ? lineError : "กำลังเชื่อม LINE…"}</strong>
+                {lineStatus === "failed" && <button type="button" className="text-button" disabled={busy} onClick={() => void connectAdminLine()}>ลองเชื่อม LINE อีกครั้ง</button>}
+                <small>บัญชี LINE จะถูกตรวจจากระบบ LINE และต้องตรงกับบัญชีผู้ดูแลนี้</small>
+              </span>
+            </div>
           )}
           {role === "admin" && acceptanceRequired && (
             <section className="note-card" aria-labelledby="accept-admin-heading">
@@ -311,7 +374,7 @@ export function LoginForm() {
       )}
 
       {message && (
-        <p className={message.startsWith("ยืนยัน LINE แล้ว") ? "success-message" : "error-message"} role="status" aria-live="polite" style={{ marginTop: 14 }}>
+        <p className="error-message" role="status" aria-live="polite">
           {message}
         </p>
       )}

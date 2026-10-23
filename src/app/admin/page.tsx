@@ -4,6 +4,7 @@ import { getStaffDetails, type StaffProfile } from "../../lib/staff";
 import { createServiceClient } from "../../lib/supabase";
 import { LogoutButton } from "../login/login-form";
 import { StaffApproval, type Applicant } from "./staff-approval";
+import { AppHeader } from "../components/app-header";
 
 export const dynamic = "force-dynamic";
 
@@ -11,9 +12,8 @@ export default async function AdminPage() {
   const account = await getAccountFromCookies();
   if (!account || account.role !== "admin" || account.status !== "active") {
     return (
-      <main className="page-wrap">
+      <main className="page-wrap no-nav">
         <section className="protected-card">
-          <p className="eyebrow">ADMIN</p>
           <h1>พื้นที่ผู้ดูแลโครงการ</h1>
           <p>กรุณาเข้าสู่ระบบด้วยบัญชีผู้ดูแลที่เจ้าของโครงการตั้งค่าไว้</p>
           <Link href="/login" className="button button-primary">ไปหน้าเข้าสู่ระบบ</Link>
@@ -47,14 +47,12 @@ export default async function AdminPage() {
   }
 
   return (
-    <main className="page-wrap">
-      <header className="topbar">
-        <Link href="/admin" className="brand"><span className="brand-mark" aria-hidden="true">ผ</span> ผึ้งพาเดิน · ผู้ดูแล</Link>
-        <LogoutButton />
-      </header>
-      <p className="eyebrow">ADMIN WORKSPACE</p>
-      <div className="admin-workspace-heading"><div><h1>พื้นที่ผู้ดูแล</h1><p className="form-help">ตรวจสอบผู้ประกอบการ จัดการ Package และเพิ่มผู้ดูแล</p></div><div><Link className="button button-secondary" href="/admin/packages">จัดการแพ็กเกจ</Link> <Link className="button button-secondary" href="/admin/bookings">ดูรายการจอง</Link> <Link className="button button-secondary" href="/admin/admins">จัดการผู้ดูแล</Link></div></div>
-      <h2>ตรวจสอบผู้ประกอบการ</h2>
+    <main className="page-wrap no-nav">
+      <AppHeader brandHref="/admin" area="ผู้ดูแลโครงการ"><LogoutButton /></AppHeader>
+      <h1>พื้นที่ผู้ดูแล</h1>
+      <p className="lead">ตรวจสอบผู้ประกอบการ จัดการ Package และเพิ่มผู้ดูแล</p>
+      <nav className="workspace-nav" aria-label="เมนูผู้ดูแล"><Link className="button button-secondary" href="/admin/packages">จัดการแพ็กเกจ</Link><Link className="button button-secondary" href="/admin/bookings">ดูรายการจอง</Link><Link className="button button-secondary" href="/admin/admins">จัดการผู้ดูแล</Link></nav>
+      <div className="section-heading section"><h2>ตรวจสอบผู้ประกอบการ</h2></div>
       {applicantLoadError ? <section className="protected-card" role="alert"><p className="error-message">ไม่สามารถโหลดรายการสมัครได้ กรุณาลองใหม่</p></section> : <StaffApproval applicants={applicants} />}
     </main>
   );

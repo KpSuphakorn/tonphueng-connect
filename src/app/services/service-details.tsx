@@ -3,6 +3,12 @@
 import Link from "next/link";
 import { useState } from "react";
 import type { PublicService } from "../../lib/services";
+import { Icon } from "../components/icons";
+
+const categoryLabels: Record<string, string> = {
+  community_product: "สินค้าชุมชน", accommodation: "ที่พัก", restaurant: "ร้านอาหาร",
+  tourism_trail: "ท่องเที่ยว / เส้นทางเดินป่า", other: "อื่น ๆ",
+};
 
 export function ServiceDetails({ service, canSave }: { service: PublicService; canSave: boolean }) {
   const [imageIndex, setImageIndex] = useState(0);
@@ -21,15 +27,23 @@ export function ServiceDetails({ service, canSave }: { service: PublicService; c
     } catch (cause) { setMessage(cause instanceof Error ? cause.message : "บันทึกไม่สำเร็จ กรุณาลองใหม่"); }
     finally { setBusy(false); }
   }
-  return <article>
-    <p className="eyebrow">{service.category.replaceAll("_", " ").toUpperCase()}</p>
-    <h1>{service.name}</h1>
+  return <article className="detail-layout">
     <div className="service-gallery">
-      {service.photos.length ? <img src={service.photos[imageIndex]} alt={`รูปที่ ${imageIndex + 1} ของ ${service.name}`} /> : <div className="service-image-placeholder">ยังไม่มีรูปภาพ</div>}
-      {service.photos.length > 1 && <div className="gallery-controls"><button className="button button-secondary" onClick={() => setImageIndex((imageIndex + service.photos.length - 1) % service.photos.length)}>รูปก่อนหน้า</button><span aria-live="polite">รูป {imageIndex + 1} จาก {service.photos.length}</span><button className="button button-secondary" onClick={() => setImageIndex((imageIndex + 1) % service.photos.length)}>รูปถัดไป</button></div>}
+      {service.photos.length ? <img src={service.photos[imageIndex]} alt={`รูปที่ ${imageIndex + 1} ของ ${service.name}`} /> : <div className="service-image-placeholder"><Icon name="leaf" size={40} /><span className="visually-hidden">ยังไม่มีรูปภาพ</span></div>}
+      {service.photos.length > 1 && <div className="gallery-controls">
+        <button className="gallery-button" type="button" onClick={() => setImageIndex((imageIndex + service.photos.length - 1) % service.photos.length)}><Icon name="chevronLeft" /><span className="visually-hidden">รูปก่อนหน้า</span></button>
+        <span className="gallery-count" aria-live="polite">รูป {imageIndex + 1} จาก {service.photos.length}</span>
+        <button className="gallery-button" type="button" onClick={() => setImageIndex((imageIndex + 1) % service.photos.length)}><Icon name="chevronRight" /><span className="visually-hidden">รูปถัดไป</span></button>
+      </div>}
     </div>
-    <section className="service-detail-copy"><h2>รายละเอียด</h2><p>{service.description || "ผู้ประกอบการยังไม่ได้เพิ่มรายละเอียด"}</p><h2>ที่อยู่</h2><p>{service.address}</p><p><a className="text-link" href={mapUrl.toString()} target="_blank" rel="noreferrer">เปิดพิกัดใน Google Maps</a></p><h2>ติดต่อ</h2><p><a className="text-link" href={`tel:${service.phone}`}>{service.phone}</a></p></section>
-    {canSave ? <button className="button button-primary button-wide" disabled={busy} onClick={save}>{busy ? "กำลังบันทึก…" : "บันทึกเข้า My Trip"}</button> : <p className="note-card">เข้าสู่ระบบด้วย LINE เพื่อบันทึกสถานที่ <Link className="text-link" href="/login">เข้าสู่ระบบ</Link></p>}
-    {message && <p className="success-message" role="status">{message}</p>}
+    <div className="detail-copy">
+      <span className="chip">{categoryLabels[service.category] ?? service.category}{service.other_category ? ` · ${service.other_category}` : ""}</span>
+      <h1>{service.name}</h1>
+      <section className="detail-section"><h2>รายละเอียด</h2><p className="detail-description">{service.description || "ผู้ประกอบการยังไม่ได้เพิ่มรายละเอียด"}</p></section>
+      <section className="detail-section"><h2>ที่อยู่</h2><div className="detail-row"><Icon name="pin" size={20} /><div><p>{service.address}</p><a className="text-link" href={mapUrl.toString()} target="_blank" rel="noreferrer">เปิดพิกัดใน Google Maps</a></div></div></section>
+      <section className="detail-section"><h2>ติดต่อ</h2><div className="detail-row"><Icon name="phone" size={20} /><p><a className="text-link" href={`tel:${service.phone}`}>{service.phone}</a></p></div></section>
+      {canSave ? <div className="action-bar"><button className="button button-primary" disabled={busy} onClick={save}>{busy ? "กำลังบันทึก…" : "บันทึกเข้า My Trip"}</button></div> : <p className="note-card">เข้าสู่ระบบด้วย LINE เพื่อบันทึกสถานที่ <Link className="text-link" href="/login">เข้าสู่ระบบ</Link></p>}
+      {message && <p className="success-message" role="status">{message}</p>}
+    </div>
   </article>;
 }

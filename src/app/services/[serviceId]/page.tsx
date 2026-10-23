@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { getActiveService } from "../../../lib/services";
 import { getAccountFromCookies } from "../../../lib/auth";
 import { ServiceDetails } from "../service-details";
+import { AppHeader } from "../../components/app-header";
+import { BottomNav } from "../../components/bottom-nav";
 
 export const dynamic = "force-dynamic";
 
@@ -13,8 +15,8 @@ export default async function ServicePage({ params }: { params: Promise<{ servic
   const account = await getAccountFromCookies();
   const isCustomer = account?.role === "customer" && account.status === "active";
   return <main className="page-wrap">
-    <header className="topbar"><Link href="/services" className="top-link">← กลับไปรายการบริการ</Link><Link href="/my-trip" className="top-link">My Trip</Link></header>
+    <AppHeader back={{ href: "/services", label: "รายการบริการ" }}><Link href="/my-trip" className="top-link">My Trip</Link></AppHeader>
     <ServiceDetails service={service} canSave={isCustomer} />
-    <nav className="bottom-nav" aria-label="เมนูลูกค้า"><Link href="/">หน้าหลัก</Link><Link href="/my-trip">My Trip</Link><Link href="/my-order">My Order</Link></nav>
+    <BottomNav />
   </main>;
 }

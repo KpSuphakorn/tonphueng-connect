@@ -1,25 +1,31 @@
 import Link from "next/link";
 import { getAccountFromCookies } from "../lib/auth";
 import { LogoutButton } from "./login/login-form";
+import { Brand } from "./components/app-header";
+import { BottomNav } from "./components/bottom-nav";
+import { Icon, type IconName } from "./components/icons";
 
-const offers = [
+const offers: Array<{ href: string; title: string; description: string; image: string; icon: IconName }> = [
   {
     href: "/packages",
     title: "แพ็กเกจชุมชน",
     description: "เลือกประสบการณ์และเส้นทางเรียนรู้ของบ้านต้นผึ้ง",
-    action: "ดูแพ็กเกจ",
+    image: "/images/card-packages.webp",
+    icon: "backpack",
   },
   {
     href: "/products",
     title: "สินค้าชุมชน",
     description: "เลือกหนึ่งร้านเพื่อดูสินค้าและจัดตะกร้า",
-    action: "เลือกร้านสินค้า",
+    image: "/images/card-products.webp",
+    icon: "store",
   },
   {
     href: "/services",
     title: "บริการของเรา",
     description: "สำรวจที่พัก ร้านอาหาร และบริการท่องเที่ยว",
-    action: "เลือกดูบริการ",
+    image: "/images/card-services.webp",
+    icon: "leaf",
   },
 ];
 
@@ -28,63 +34,50 @@ export default async function HomePage() {
   const isCustomer = account?.role === "customer" && account.status === "active";
 
   return (
-    <main className="page-wrap">
-      <header className="topbar">
-        <Link href="/" className="brand">
-          <span className="brand-mark" aria-hidden="true">ผ</span>
-          <span>ผึ้งพาเดิน <span style={{ color: "var(--muted)", fontWeight: 500 }}>บ้านต้นผึ้ง</span></span>
-        </Link>
-        {isCustomer ? <LogoutButton /> : <Link className="top-link" href="/login">เข้าสู่ระบบ</Link>}
-      </header>
-
-      <section className="hero">
-        <div className="hero-content">
-          <p className="welcome-note">เที่ยวชุมชนบ้านต้นผึ้ง จ.เชียงใหม่</p>
-          <h1>รู้จักบ้านต้นผึ้ง<br />ผ่านประสบการณ์ของชุมชน</h1>
-          <p className="lead">เลือกชมสินค้าและบริการ วางแผนทริป และติดตามรายการของคุณได้จากที่เดียว</p>
-          {!isCustomer && <Link href="/login" className="button button-primary">เริ่มต้นใช้งาน</Link>}
-        </div>
-      </section>
-
-      <section className="section" aria-labelledby="discover-heading">
-        <div className="section-heading">
-          <div>
-            <h2 id="discover-heading">มีอะไรให้เลือกบ้าง</h2>
+    <>
+      <section className="home-hero" aria-labelledby="home-heading">
+        <img className="home-hero-photo" src="/images/hero-sea-of-mist.webp" width={1280} height={853} alt="" fetchPriority="high" />
+        <div className="home-hero-inner">
+          <header className="topbar">
+            <Brand />
+            {isCustomer ? <LogoutButton /> : <Link className="top-link" href="/login">เข้าสู่ระบบ</Link>}
+          </header>
+          <div className="home-hero-copy">
+            <p className="home-place"><Icon name="pin" size={18} />บ้านต้นผึ้ง จ.เชียงใหม่</p>
+            <h1 id="home-heading">รู้จักบ้านต้นผึ้ง<br />ผ่านประสบการณ์ของชุมชน</h1>
+            <p className="lead">เลือกชมสินค้าและบริการ วางแผนทริป และติดตามรายการของคุณได้จากที่เดียว</p>
+            {!isCustomer && <Link href="/login" className="button button-accent">เริ่มต้นใช้งาน</Link>}
           </div>
-          <p>ข้อมูลจะแสดงเมื่อผู้ดูแลและผู้ประกอบการเพิ่มรายการ</p>
-        </div>
-        <div className="cards">
-          {offers.map((offer) => offer.href ? (
-            <Link className="feature-card feature-card-link" href={offer.href} key={offer.title}>
-              <span className="feature-card-copy"><span className="feature-card-title">{offer.title}</span><span>{offer.description}</span><span className="availability">{offer.action}</span></span>
-            </Link>
-          ) : (
-            <details className="feature-card" key={offer.title}>
-              <summary>
-                <span className="feature-card-copy">
-                  <span className="feature-card-title">{offer.title}</span>
-                  <span>{offer.description}</span>
-                  <span className="availability">ยังไม่เปิดให้ใช้งาน</span>
-                </span>
-              </summary>
-              <p className="empty-detail">ยังไม่มีข้อมูลให้เลือกในขณะนี้ โปรดกลับมาตรวจสอบภายหลัง</p>
-            </details>
-          ))}
         </div>
       </section>
 
-      <section className="section note-card" aria-label="ข้อมูล My Trip">
-        <strong>ทริปและรายการของคุณ</strong>
-        <p style={{ margin: "6px 0 0" }}>{isCustomer ? "เปิด My Trip เพื่อดูสถานที่และตัวเลือกแพ็กเกจที่บันทึกไว้ ส่วน My Order จะแสดงคำสั่งซื้อเมื่อเปิดใช้งาน" : "เข้าสู่ระบบด้วย LINE เพื่อดู My Trip และ My Order ของบัญชีคุณ"}</p>
-      </section>
+      <main className="page-wrap">
+        <section className="section" aria-labelledby="discover-heading">
+          <div className="section-heading"><h2 id="discover-heading">มีอะไรให้เลือกบ้าง</h2></div>
+          <ul className="offer-list">
+            {offers.map((offer) => (
+              <li key={offer.href}>
+                <Link className="offer-card" href={offer.href}>
+                  <span className="offer-card-media"><img src={offer.image} width={960} height={720} alt="" loading="lazy" /></span>
+                  <span className="offer-card-body">
+                    <span className="offer-icon"><Icon name={offer.icon} /></span>
+                    <span className="offer-copy"><span className="offer-title">{offer.title}</span><span className="offer-text">{offer.description}</span></span>
+                    <Icon name="chevronRight" />
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
 
-      <p style={{ margin: "24px 0 0", color: "var(--muted)", fontSize: 13 }}><Link href="/credits" style={{ textDecoration: "underline", textUnderlineOffset: 3 }}>เครดิตภาพ</Link></p>
+        <section className="home-note" aria-label="ข้อมูล My Trip">
+          <strong>ทริปและรายการของคุณ</strong>
+          <p>{isCustomer ? "เปิด My Trip เพื่อดูสถานที่และตัวเลือกแพ็กเกจที่บันทึกไว้ ส่วน My Order จะแสดงคำสั่งซื้อเมื่อเปิดใช้งาน" : "เข้าสู่ระบบด้วย LINE เพื่อดู My Trip และ My Order ของบัญชีคุณ"}</p>
+        </section>
 
-      <nav className="bottom-nav" aria-label="เมนูลูกค้า">
-        <Link href="/" aria-current="page">หน้าหลัก</Link>
-        <Link href="/my-trip">My Trip</Link>
-        <Link href="/my-order">My Order</Link>
-      </nav>
-    </main>
+        <footer className="site-footer"><Link href="/credits">เครดิตภาพ</Link></footer>
+      </main>
+      <BottomNav current="home" />
+    </>
   );
 }

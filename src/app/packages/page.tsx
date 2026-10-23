@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { getPublicPackageData } from "../../lib/packages";
+import { AppHeader } from "../components/app-header";
+import { BottomNav } from "../components/bottom-nav";
+import { Icon } from "../components/icons";
 type PublicCategory = Awaited<ReturnType<typeof getPublicPackageData>>[number];
 
 export const dynamic = "force-dynamic";
@@ -10,31 +13,33 @@ export default async function PackagesPage() {
   try { categories = await getPublicPackageData(); } catch { categories = []; failed = true; }
   return (
     <main className="page-wrap">
-      <header className="topbar"><Link href="/" className="brand"><span className="brand-mark" aria-hidden="true">ผ</span> ผึ้งพาเดิน · แพ็กเกจ</Link><Link href="/" className="top-link">หน้าหลัก</Link></header>
-      <p className="eyebrow">EXPERIENCE PACKAGES</p>
-      <h1>เลือกประสบการณ์ของชุมชน</h1>
-      <p className="lead">ราคาและตัวเลือกกำหนดโดยผู้ดูแลโครงการ ราคาที่แสดงเป็นราคาต่อคนและยังไม่ใช่การจอง</p>
+      <AppHeader back={{ href: "/", label: "หน้าหลัก" }} />
+      <div className="page-intro">
+        <h1>เลือกประสบการณ์ของชุมชน</h1>
+        <p className="lead">ราคาและตัวเลือกกำหนดโดยผู้ดูแลโครงการ ราคาที่แสดงเป็นราคาต่อคนและยังไม่ใช่การจอง</p>
+      </div>
       {failed ? <p className="error-message" role="alert">โหลดแพ็กเกจไม่สำเร็จ กรุณาลองใหม่</p> : (
         <div className="package-category-grid">
           {categories.map((category) => (
             <section className="package-category-card" key={category.category}>
-              <p className="eyebrow">{category.category_title}</p>
               <h2>{category.title}</h2>
+              {category.category_title !== category.title && <p className="availability">{category.category_title}</p>}
               {category.description && <p>{category.description}</p>}
               <div className="package-sub-list">
                 {category.sub_packages.length ? category.sub_packages.map((subPackage) => (
                   <Link className="package-sub-link" href={`/packages/${subPackage.id}`} key={subPackage.id}>
-                    <span><strong>{subPackage.title}</strong><small>{subPackage.slots.length} ตัวเลือกตาม slot</small></span>
+                    <span><strong>{subPackage.title}</strong><small>เลือก {subPackage.slots.reduce((total, slot) => total + slot.required_count, 0)} รายการ</small></span>
                     <span className="package-price">{new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(subPackage.price_per_person_satang / 100)}<small>/ คน</small></span>
+                    <Icon name="chevronRight" size={20} />
                   </Link>
-                )) : <p className="form-help">ยังไม่มี Sub Package ให้เลือก</p>}
+                )) : <p className="form-help">ยังไม่มีแพ็กเกจย่อยให้เลือก</p>}
               </div>
-              {category.contact_url ? <a className="text-link" href={category.contact_url} target="_blank" rel="noreferrer">สอบถามแพ็กเกจเพิ่มเติม ↗</a> : <p className="form-help">ยังไม่ได้ตั้งค่าช่องทางติดต่อสำหรับแพ็กเกจเพิ่มเติม</p>}
+              {category.contact_url ? <a className="text-link" href={category.contact_url} target="_blank" rel="noreferrer">สอบถามแพ็กเกจเพิ่มเติม <Icon name="external" size={16} /></a> : <p className="form-help">ยังไม่ได้ตั้งค่าช่องทางติดต่อสำหรับแพ็กเกจเพิ่มเติม</p>}
             </section>
           ))}
         </div>
       )}
-      <nav className="bottom-nav" aria-label="เมนูลูกค้า"><Link href="/">หน้าหลัก</Link><Link href="/my-trip">My Trip</Link><Link href="/my-order">My Order</Link></nav>
+      <BottomNav />
     </main>
   );
 }

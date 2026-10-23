@@ -75,10 +75,27 @@ test("login lets a person choose the matching account type", async ({ page }) =>
   await expect(page.getByLabel("อีเมล")).toBeVisible();
   await expect(page.getByLabel("รหัสผ่าน")).toBeVisible();
   await expect(page.getByRole("button", { name: "เข้าสู่ระบบ", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "ผู้ดูแลโครงการ" }).click();
-  await expect(page.getByRole("button", { name: "ยืนยันบัญชี LINE ที่ผูกไว้" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "เข้าสู่ระบบ", exact: true })).toBeDisabled();
   expect(lineRequests.some((url) => url.includes("/authorize"))).toBe(false);
+  // Choosing Admin obtains the LINE identity without a separate button: outside LINE it goes through LINE login and returns preselected.
+  await page.getByRole("button", { name: "ผู้ดูแลโครงการ" }).click();
+  await expect(page.getByText("เชื่อม LINE แล้ว", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "ผู้ดูแลโครงการ" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByLabel("อีเมล")).toBeEnabled();
+  await expect(page.getByRole("button", { name: "ยืนยันบัญชี LINE ที่ผูกไว้" })).toHaveCount(0);
+  expect(lineRequests.filter((url) => url.includes("/liff/v1/authorize")).length).toBe(1);
+  expect(await page.evaluate(() => sessionStorage.getItem("tonphueng-admin-login-intent"))).toBeNull();
+});
+
+test("a canceled Admin LINE connection shows a retry that completes without reselecting the role", async ({ page }) => {
+  const lineRequests = await stubLine(page, "cancel-once");
+  await page.goto("/login");
+  await page.getByRole("button", { name: "ผู้ดูแลโครงการ" }).click();
+  await expect(page.getByRole("button", { name: "ลองเชื่อม LINE อีกครั้ง" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "ผู้ดูแลโครงการ" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "เข้าสู่ระบบ", exact: true })).toBeDisabled();
+  await page.getByRole("button", { name: "ลองเชื่อม LINE อีกครั้ง" }).click();
+  await expect(page.getByText("เชื่อม LINE แล้ว", { exact: true })).toBeVisible();
+  expect(lineRequests.filter((url) => url.includes("/liff/v1/authorize")).length).toBe(2);
 });
 
 test("Customer choice resumes after LINE callback and submits once without choosing again", async ({ page }) => {

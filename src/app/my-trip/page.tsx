@@ -4,6 +4,8 @@ import { getSavedServices } from "../../lib/services";
 import { getMyTripBookingServices, listPackageBookings } from "../../lib/packages";
 import { BookedTrips } from "./booked-trips";
 import { MyTripList } from "./my-trip-list";
+import { AppHeader } from "../components/app-header";
+import { BottomNav } from "../components/bottom-nav";
 
 export default async function MyTripPage() {
   const account = await getAccountFromCookies();
@@ -12,11 +14,7 @@ export default async function MyTripPage() {
   const [bookings, bookedPlaces] = isCustomer ? await Promise.all([listPackageBookings(account.id), getMyTripBookingServices(account.id)]) : [[], []];
   return (
     <main className="page-wrap">
-      <header className="topbar">
-        <Link href="/" className="brand"><span className="brand-mark" aria-hidden="true">ผ</span> ผึ้งพาเดิน</Link>
-        {!isCustomer && <Link href="/login" className="top-link">เข้าสู่ระบบ</Link>}
-      </header>
-      <p className="eyebrow">MY TRIP</p>
+      <AppHeader>{!isCustomer && <Link href="/login" className="top-link">เข้าสู่ระบบ</Link>}</AppHeader>
       <h1>My Trip</h1>
       {isCustomer ? (
         <>
@@ -24,11 +22,9 @@ export default async function MyTripPage() {
           <MyTripList initialServices={services} />
         </>
         ) : (
-          <section className="section note-card"><strong>เข้าสู่ระบบด้วย LINE เพื่อดู My Trip</strong><p style={{ margin: "6px 0 0" }}>รายการจะแสดงเฉพาะบัญชีลูกค้าของคุณ</p><Link href="/login" className="button button-primary" style={{ marginTop: 14 }}>เข้าสู่ระบบ</Link></section>
+          <section className="section note-card"><strong>เข้าสู่ระบบด้วย LINE เพื่อดู My Trip</strong><p>รายการจะแสดงเฉพาะบัญชีลูกค้าของคุณ</p><Link href="/login" className="button button-primary">เข้าสู่ระบบ</Link></section>
       )}
-      <nav className="bottom-nav" aria-label="เมนูลูกค้า">
-        <Link href="/">หน้าหลัก</Link><Link href="/my-trip" aria-current="page">My Trip</Link><Link href="/my-order">My Order</Link>
-      </nav>
+      <BottomNav current="trip" />
     </main>
   );
 }

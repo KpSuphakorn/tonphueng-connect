@@ -1,8 +1,11 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAccountFromCookies } from "../../../lib/auth";
 import { getCustomerPackageSelections, getPublicPackageData } from "../../../lib/packages";
 import { PackageOptions, type PackageView, type SavedPackageSelection } from "../package-options";
+
+import { AppHeader } from "../../components/app-header";
+import { BottomNav } from "../../components/bottom-nav";
+import { Icon } from "../../components/icons";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +13,7 @@ export default async function PackageDetailsPage({ params }: { params: Promise<{
   const { subPackageId } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(subPackageId)) notFound();
   let categories;
-  try { categories = await getPublicPackageData(); } catch { return <main className="page-wrap"><p className="error-message">โหลดแพ็กเกจไม่สำเร็จ</p></main>; }
+  try { categories = await getPublicPackageData(); } catch { return <main className="page-wrap"><AppHeader back={{ href: "/packages", label: "แพ็กเกจ" }} /><p className="error-message" role="alert">โหลดแพ็กเกจไม่สำเร็จ</p><BottomNav /></main>; }
   const category = categories.find((item) => item.sub_packages.some((subPackage) => subPackage.id === subPackageId));
   const subPackage = category?.sub_packages.find((item) => item.id === subPackageId);
   if (!category || !subPackage) notFound();
@@ -26,14 +29,17 @@ export default async function PackageDetailsPage({ params }: { params: Promise<{
   const packageView: PackageView = { category: category.category, revision: category.revision, category_title: category.category_title, ...subPackage };
   return (
     <main className="page-wrap">
-      <header className="topbar"><Link href="/packages" className="top-link">← แพ็กเกจ</Link><Link href="/" className="brand">ผึ้งพาเดิน · {category.category_title}</Link></header>
-      <p className="eyebrow">{category.category_title}</p>
-      <h1>{subPackage.title}</h1>
-      <p className="lead">{subPackage.description}</p>
+      <AppHeader back={{ href: "/packages", label: "แพ็กเกจ" }} />
+      <div className="page-intro">
+        <span className="chip">{category.category_title}</span>
+        <h1>{subPackage.title}</h1>
+        {subPackage.description && <p className="lead">{subPackage.description}</p>}
+      </div>
       <section className="package-detail-price"><span>ราคาต่อคน</span><strong>{new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(subPackage.price_per_person_satang / 100)}</strong><small>ระยะเวลา {subPackage.duration_days} วัน · ระบบคำนวณยอดจากจำนวนผู้เข้าร่วมและแสดงยอดที่บันทึกก่อนชำระเงิน</small></section>
       <PackageOptions packageView={packageView} canSelect={isCustomer} savedSelection={saved} />
-      {category.contact_url && <p><a className="text-link" href={category.contact_url} target="_blank" rel="noreferrer">สอบถามแพ็กเกจเพิ่มเติม ↗</a></p>}
-      {!isCustomer && <p className="form-help">เข้าสู่ระบบด้วยบัญชี Customer เพื่อบันทึกตัวเลือกนี้</p>}
+      {category.contact_url && <p><a className="text-link" href={category.contact_url} target="_blank" rel="noreferrer">สอบถามแพ็กเกจเพิ่มเติม <Icon name="external" size={16} /></a></p>}
+      {!isCustomer && <p className="form-help">เข้าสู่ระบบด้วยบัญชีลูกค้าเพื่อบันทึกตัวเลือกนี้</p>}
+      <BottomNav />
     </main>
   );
 }

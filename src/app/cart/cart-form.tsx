@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import type { CustomerCart } from "../../lib/product-types";
+import { Icon } from "../components/icons";
 
 type UnavailableCart = { available: false; service_id: string; store_name: string; items: Array<{ product_id: string; quantity: number }> };
 type CartState = CustomerCart | UnavailableCart;
@@ -100,9 +101,9 @@ export function CartForm() {
     } catch (cause) { setError(cause instanceof Error ? cause.message : "สร้างคำสั่งซื้อไม่สำเร็จ"); setBusy(false); }
   }
 
-  if (loading) return <p role="status" className="form-help">กำลังโหลดตะกร้า…</p>;
+  if (loading) return <div aria-busy="true"><p role="status" className="form-help">กำลังโหลดตะกร้า…</p><div className="skeleton" /><div className="skeleton" /></div>;
   if (loginRequired) return <section className="note-card"><strong>เข้าสู่ระบบด้วย LINE เพื่อใช้ตะกร้า</strong><p><Link className="text-link" href="/login">ไปหน้าเข้าสู่ระบบ</Link></p></section>;
-  if (error && !cart) return <section><p role="alert" className="error-message">{error}</p><button className="button button-secondary" type="button" onClick={() => void load()}>โหลดอีกครั้ง</button></section>;
+  if (error && !cart) return <section className="action-row"><p role="alert" className="error-message">{error}</p><button className="button button-secondary" type="button" onClick={() => void load()}>โหลดอีกครั้ง</button></section>;
   if (!cart) return <section className="note-card"><strong>ตะกร้ายังว่าง</strong><p>เลือกร้านสินค้าชุมชนเพื่อเพิ่มสินค้า</p><Link className="button button-primary" href="/products">เลือกร้าน</Link></section>;
 
   const dirty = !cart.available || fulfillment !== cart.fulfillment || (fulfillment === "delivery" ? address : "") !== cart.address
@@ -112,7 +113,7 @@ export function CartForm() {
   const pending = busy || navigating;
 
   return <section className="cart-panel" aria-labelledby="cart-store-heading">
-    <h2 id="cart-store-heading">{cart.store_name}</h2>
+    <div className="cart-store"><span className="store-icon"><Icon name="store" /></span><h2 id="cart-store-heading">{cart.store_name}</h2></div>
     {!cart.available ? <><p className="error-message" role="alert">รายการในตะกร้าหมดหรือร้านไม่เปิดใช้งานแล้ว ยอดเดิมใช้ไม่ได้ กรุณาล้างตะกร้าก่อนเลือกสินค้าใหม่</p><button type="button" className="button button-secondary" onClick={() => setConfirmClear(true)}>ล้างตะกร้า</button></> : <>
       <ul className="cart-line-list">{items.map((item) => <li key={item.product_id}>
         <span className="cart-line-name"><strong>{item.name}</strong><small>{money(item.price_satang ?? 0)} ต่อชิ้น</small></span>
@@ -125,9 +126,9 @@ export function CartForm() {
       </fieldset>
       {fulfillment === "delivery" && <><label className="field"><span>ที่อยู่จัดส่ง <span className="required-marker" aria-hidden="true">*</span></span><textarea required minLength={5} maxLength={500} value={address} aria-invalid={checkoutAttempted && addressInvalid} aria-describedby="address-help" onChange={(event) => setAddress(event.target.value)} /></label>{checkoutAttempted && addressInvalid ? <p id="address-help" className="error-message" role="alert">กรุณากรอกที่อยู่จัดส่งอย่างน้อย 5 ตัวอักษร</p> : <p id="address-help" className="form-help"><span className="required-marker" aria-hidden="true">*</span> จำเป็นต้องกรอก</p>}</>}
       <dl className="cart-total-list"><div><dt>ราคาสินค้าในตะกร้าล่าสุด</dt><dd>{money(cart.subtotal_satang)}</dd></div><div><dt>ค่าส่ง</dt><dd>{money(cart.shipping_satang)}{cart.fulfillment === "delivery" && <small> ค่าส่งคงที่</small>}</dd></div><div className="cart-grand-total"><dt>ยอดรวมปัจจุบัน</dt><dd>{money(cart.total_satang)}</dd></div></dl>
-      <p className="form-help">{dirty ? "มีการแก้ไขที่ยังไม่บันทึก ยอดจะคำนวณใหม่บน server เมื่อกดสั่งซื้อ และแสดงให้ตรวจก่อนชำระเงิน" : "ยอดที่แสดงคำนวณจากราคาสินค้าปัจจุบันบน server"}</p>
+      <p className="form-help">{dirty ? "มีการแก้ไขที่ยังไม่บันทึก ยอดจะคำนวณใหม่ในระบบเมื่อกดสั่งซื้อ และแสดงให้ตรวจก่อนชำระเงิน" : "ยอดที่แสดงคำนวณจากราคาสินค้าปัจจุบันในระบบ"}</p>
       {error && <p role="alert" className="error-message">{error}</p>}{notice && <p role="status" className="success-message">{notice}</p>}
-      <button type="button" className="button button-primary button-wide" disabled={pending} aria-busy={pending} onClick={() => void placeOrder()}>{pending ? "กำลังสั่งซื้อ…" : "สั่งซื้อ"}</button>
+      <div className="action-bar"><button type="button" className="button button-primary button-wide" disabled={pending} aria-busy={pending} onClick={() => void placeOrder()}>{pending ? "กำลังสั่งซื้อ…" : "สั่งซื้อ"}</button></div>
       <div className="product-form-actions"><button type="button" className="button button-secondary" disabled={pending || quantitiesInvalid || addressInvalid} onClick={() => void save()}>{busy ? "กำลังบันทึก…" : "บันทึกตะกร้าและคำนวณใหม่"}</button><button type="button" className="button button-secondary" disabled={pending} onClick={() => setConfirmClear(true)}>ล้างตะกร้า</button></div>
     </>}
     {confirmClear && <div className="switch-confirmation" role="alertdialog" aria-labelledby="clear-cart-title"><h3 id="clear-cart-title">ล้างรายการในตะกร้า?</h3><p>สินค้าจากร้านนี้จะถูกนำออกจากตะกร้า</p><div className="product-form-actions"><button type="button" className="button button-primary" disabled={busy} onClick={() => void clear()}>ยืนยันล้างตะกร้า</button><button type="button" className="button button-secondary" disabled={busy} onClick={() => setConfirmClear(false)}>เก็บตะกร้าไว้</button></div></div>}

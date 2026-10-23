@@ -23,11 +23,11 @@ export function OrderPayment({ order: initial }: { order: ProductOrder }) {
     } catch (error) { setFailed(true); setMessage(error instanceof Error ? error.message : "ยืนยันไม่สำเร็จ"); }
     finally { setBusy(false); }
   }
-  return <section className="section booking-payment">
+  return <section className="booking-payment">
     {order.payment_status === "pending_simulated" ? <>
       <h2>ชำระเงินผ่าน QR</h2>
       <p className="form-help">สแกน QR เพื่อชำระเงิน</p>
-      <img className="demo-qr" src="/demo-qr.png" width={144} height={144} alt="QR สำหรับชำระเงิน" />
+      <img className="demo-qr" src="/demo-qr.png" width={184} height={184} alt="QR สำหรับชำระเงิน" />
       <label className="package-choice"><input type="checkbox" checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} /><span>ฉันตรวจสอบรายการและยอดชำระแล้ว <span className="required-marker" aria-hidden="true">*</span></span></label>
       <button className="button button-primary" type="button" disabled={busy || refreshing || !acknowledged} aria-busy={busy} onClick={() => void confirm()}>{busy ? "กำลังยืนยัน…" : "ยืนยันการชำระเงิน"}</button>
     </> : <>

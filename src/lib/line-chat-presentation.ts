@@ -17,7 +17,7 @@ type FlexBubble = {
 };
 
 export type LineChatMessage =
-  | { type: "text"; text: string; quickReply?: { items: Array<{ type: "action"; action: { type: "message"; label: string; text: string } }> } }
+  | { type: "text"; text: string; quickReply?: { items: Array<{ type: "action"; action: { type: "message"; label: string; text: string } | { type: "uri"; label: string; uri: string } }> } }
   | { type: "flex"; altText: string; contents: { type: "carousel"; contents: FlexBubble[] } };
 
 export type ChatPresentation = { text: string; messages?: LineChatMessage[] };
@@ -89,10 +89,35 @@ function quickReplies(intent?: string) {
   return items ? { items: items.map(([label, text]) => ({ type: "action" as const, action: { type: "message" as const, label, text } })) } : undefined;
 }
 
+const navigationPaths = {
+  packages: "/packages",
+  products: "/products",
+  services: "/services",
+  "my-order": "/my-order",
+  "my-trip": "/my-trip",
+} as const;
+export type ChatNavigationPath = keyof typeof navigationPaths;
+
+export function chatNavigationUrl(path: ChatNavigationPath, appOrigin: string) {
+  const origin = safeOrigin(appOrigin);
+  return origin ? `${origin}${navigationPaths[path]}` : "";
+}
+
+function navigationQuickReplies(actions: Array<{ label: string; path: ChatNavigationPath }>, origin: string) {
+  const items = actions.slice(0, 3).flatMap(({ label, path }) => {
+    const safePath = navigationPaths[path];
+    const safeLabel = clip(label, 20);
+    return safePath && safeLabel ? [{ type: "action" as const, action: { type: "uri" as const, label: safeLabel, uri: `${origin}${safePath}` } }] : [];
+  });
+  return items.length ? { items } : undefined;
+}
+
 export function buildChatPresentation(input: {
   text: string;
   cards?: ChatCard[];
+  intro?: string;
   followUp?: string;
+  actions?: Array<{ label: string; path: ChatNavigationPath }>;
   appOrigin: string;
 }): ChatPresentation {
   const text = clip(input.text, 1000);
@@ -107,9 +132,15 @@ export function buildChatPresentation(input: {
         return [name, price].filter(Boolean).join(", ");
       }).filter(Boolean).join(" • ");
       const altText = clip(summaries ? `รายการแนะนำ: ${summaries}` : "รายการแนะนำจากผึ้งพาเดิน", 400);
-      return { text, messages: [{ type: "flex", altText, contents: { type: "carousel", contents: bubbles } }] };
+      const messages: LineChatMessage[] = [];
+      const intro = clip(input.intro ?? "", 300);
+      if (intro) messages.push({ type: "text", text: intro });
+      messages.push({ type: "flex", altText, contents: { type: "carousel", contents: bubbles } });
+      return { text, messages };
     }
   }
-  const quickReply = quickReplies(input.followUp);
+  const quickReply = origin && input.actions?.length
+    ? navigationQuickReplies(input.actions, origin)
+    : quickReplies(input.followUp);
   return { text, messages: [{ type: "text", text: text || "ลองบอกความต้องการเพิ่มเติมได้เลย", ...(quickReply ? { quickReply } : {}) }] };
 }

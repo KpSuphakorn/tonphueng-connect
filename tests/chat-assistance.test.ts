@@ -7,7 +7,7 @@ import { GET as catalogueImage } from "../src/app/api/line/catalogue-image/route
 const serviceId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const staffId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const productId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
-function setup(quota = true, selection = `service:${serviceId}`, intent = "recommend", followUp = "more", geminiStatus = 200, geminiResponses: Array<number | "timeout" | "blocked"> = [geminiStatus]) {
+function setup(quota = true, selection = `service:${serviceId}`, intent = "recommend", followUp = "more", geminiStatus = 200, geminiResponses: Array<number | "timeout" | "blocked"> = [geminiStatus], detailTopic = "none", catalogs: unknown[] = [], history: Array<{ role: string; text: string }> = []) {
   vi.stubEnv("SUPABASE_URL", "http://supabase.test"); vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "service-test-key");
   vi.stubEnv("LINE_CHAT_ENABLED", "true"); vi.stubEnv("GEMINI_API_KEY", "gemini-test-key"); vi.stubEnv("GEMINI_MODEL", "gemini-3.5-flash-lite"); vi.stubEnv("APP_ORIGIN", "https://shop.test");
   const calls: Array<{ url: URL; method: string; body: string }> = [];
@@ -25,14 +25,14 @@ function setup(quota = true, selection = `service:${serviceId}`, intent = "recom
       }
       if (status === "blocked") return Response.json({ candidates: [{ finishReason: "SAFETY", content: { parts: [] } }] });
       return status === 200
-        ? Response.json({ candidates: [{ content: { parts: [{ text: JSON.stringify({ intent, selection_ids: selection ? [selection, "service:forged"] : [], follow_up: followUp }) }] } }] })
+        ? Response.json({ candidates: [{ content: { parts: [{ text: JSON.stringify({ intent, selection_ids: selection ? [selection, "service:forged"] : [], follow_up: followUp, detail_topic: detailTopic }) }] } }] })
         : Response.json({ error: { message: "provider error" } }, { status });
     }
     if (url.pathname === "/rest/v1/rpc/claim_line_chat_quota") return Response.json(quota);
-    if (url.pathname === "/rest/v1/line_conversations") return Response.json(method === "GET" ? [] : []);
-    if (url.pathname === "/rest/v1/services") return Response.json([{ id: serviceId, account_id: staffId, name: "สวนชุมชน", description: "เดินชมสวน", category: "tourism_trail" }]);
+    if (url.pathname === "/rest/v1/line_conversations") return Response.json(method === "GET" ? (history.length ? { messages: history } : []) : []);
+    if (url.pathname === "/rest/v1/services") return Response.json([{ id: serviceId, account_id: staffId, name: "สวนชุมชน", description: "tourism_trail. เดินชมสวน", category: "tourism_trail" }]);
     if (url.pathname === "/rest/v1/products") return Response.json([{ id: productId, name: "น้ำผึ้ง", description: "", price_satang: 12345, service_id: serviceId, services: { account_id: staffId, category: "community_product" } }]);
-    if (url.pathname === "/rest/v1/package_catalogs") return Response.json([]);
+    if (url.pathname === "/rest/v1/package_catalogs") return Response.json(catalogs);
     if (url.pathname === "/rest/v1/app_accounts") return Response.json([{ id: staffId }]);
     throw new Error(`Unexpected fetch ${method} ${url.pathname}`);
   }));
@@ -45,6 +45,14 @@ describe("Chat Assistance", () => {
     vi.stubEnv("LINE_CHAT_ENABLED", "false");
     const fetchMock = vi.fn(); vi.stubGlobal("fetch", fetchMock);
     expect((await answerLineMessage(`U${"a".repeat(32)}`, "อยากไปเที่ยว")).status).toBe("disabled");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses credentials before the feature-off response or any external access", async () => {
+    vi.stubEnv("LINE_CHAT_ENABLED", "false");
+    const fetchMock = vi.fn(); vi.stubGlobal("fetch", fetchMock);
+    const result = await answerLineMessage(`U${"a".repeat(32)}`, "คํา​ว่า password คือ abcdef");
+    expect(result.text).toContain("อย่าส่งรหัสผ่าน");
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -64,15 +72,19 @@ describe("Chat Assistance", () => {
     expect(modelBody.generationConfig.responseMimeType).toBe("application/json");
     expect(prompt).toContain('"price_satang":12345');
     expect(prompt).toContain('"category":"tourism_trail"');
+    expect(prompt).toContain('"description":"เดินชมสวน"');
     expect(prompt).toContain("100 satang = 1 Baht");
     expect(JSON.stringify(modelBody)).not.toContain("photo_path");
     expect(calls.some((call) => call.url.pathname === "/rest/v1/rpc/claim_line_chat_quota")).toBe(true);
     const flex = result.messages?.[0];
-    expect(flex?.type).toBe("flex");
-    if (flex?.type === "flex") {
-      expect(flex.contents.contents[0].hero).toBeUndefined();
-      expect(flex.contents.contents[0].footer.contents[0].action).toMatchObject({ uri: `https://shop.test/services/${serviceId}` });
-      expect(JSON.stringify(flex.contents.contents[0].body.contents)).not.toContain("tourism_trail");
+    expect(result.messages).toHaveLength(2);
+    expect(result.messages?.[0]).toMatchObject({ type: "text", text: "ตามที่เล่ามา รายการที่อาจตรงมีดังนี้" });
+    const carousel = result.messages?.[1];
+    expect(carousel?.type).toBe("flex");
+    if (carousel?.type === "flex") {
+      expect(carousel.contents.contents[0].hero).toBeUndefined();
+      expect(carousel.contents.contents[0].footer.contents[0].action).toMatchObject({ uri: `https://shop.test/services/${serviceId}` });
+      expect(JSON.stringify(carousel.contents.contents[0].body.contents)).not.toContain("tourism_trail");
     }
   });
 
@@ -185,7 +197,7 @@ describe("Chat Assistance", () => {
     expect(calls.some((call) => call.url.hostname === "generativelanguage.googleapis.com")).toBe(false);
   });
 
-  it("uses fixed follow-up/no-data text and stops private-data requests before Gemini", async () => {
+  it("uses fixed follow-up text and stops credential requests before Gemini", async () => {
     const followupCalls = setup(true, "", "ask", "budget");
     expect((await answerLineMessage(`U${"a".repeat(32)}`, "แนะนำหน่อย")).text).toContain("งบประมาณ");
     expect(followupCalls.some((call) => call.url.hostname === "generativelanguage.googleapis.com")).toBe(true);
@@ -193,8 +205,143 @@ describe("Chat Assistance", () => {
     expect((await answerLineMessage(`U${"a".repeat(32)}`, "มีสินค้าไหม")).text).toContain("ยังไม่พบรายการ");
     const privateCalls = setup();
     const privateResult = await answerLineMessage(`U${"a".repeat(32)}`, "ช่วยดูคำสั่งซื้อของฉันและรหัสผ่าน");
-    expect(privateResult.text).toContain("ข้อมูลลับ");
+    expect(privateResult.text).toContain("อย่าส่งรหัสผ่าน");
     expect(privateCalls).toHaveLength(0);
+  });
+
+  it("routes help, public how-to, and own account requests without database or Gemini access", async () => {
+    for (const phrase of ["ช่วยอะไรได้บ้าง", "สวัสดี"]) {
+      const calls = setup();
+      const result = await answerLineMessage(`U${"a".repeat(32)}`, phrase);
+      expect(result.text).toContain("แพ็กเกจ");
+      expect(result.text).toContain("https://shop.test/packages");
+      const helpMessage = result.messages?.[0];
+      expect(helpMessage?.type).toBe("text");
+      expect(helpMessage?.type === "text" && helpMessage.quickReply?.items.some((item) => item.action.type === "uri" && item.action.uri === "https://shop.test/packages")).toBe(true);
+      expect(calls).toHaveLength(0);
+    }
+    const cases = [
+      ["จองยังไง", "https://shop.test/packages", "ดำเนินการผ่านหน้าเว็บ"],
+      ["การจองทำยังไง", "https://shop.test/packages", "ดำเนินการผ่านหน้าเว็บ"],
+      ["ขอดูวิธีการจอง", "https://shop.test/packages", "ดำเนินการผ่านหน้าเว็บ"],
+      ["วิธีการจองของที่พัก", "https://shop.test/packages", "ดำเนินการผ่านหน้าเว็บ"],
+      ["วิธีสั่งซื้อสินค้า", "https://shop.test/products", "เพิ่มลงตะกร้า"],
+      ["สั่งซื้อสินค้ายังไง", "https://shop.test/products", "เพิ่มลงตะกร้า"],
+      ["ช่วยดูคำสั่งซื้อของฉัน", "https://shop.test/my-order", "เข้าสู่ระบบ"],
+      ["ออเดอร์ถึงไหนแล้ว", "https://shop.test/my-order", "เข้าสู่ระบบ"],
+      ["เลขออเดอร์", "https://shop.test/my-order", "เข้าสู่ระบบ"],
+      ["ดูการจองของฉัน", "https://shop.test/my-trip", "เข้าสู่ระบบ"],
+      ["ดูรายการจองล่าสุด", "https://shop.test/my-trip", "เข้าสู่ระบบ"],
+    ];
+    for (const [phrase, url, text] of cases) {
+      const calls = setup();
+      const result = await answerLineMessage(`U${"a".repeat(32)}`, phrase);
+      expect(result.text).toContain(url);
+      expect(result.text).toContain(text);
+      const message = result.messages?.[0];
+      expect(message?.type).toBe("text");
+      expect(message?.type === "text" && message.quickReply?.items.some((item) => item.action.type === "uri" && item.action.uri === url)).toBe(true);
+      expect(calls).toHaveLength(0);
+    }
+    const otherCustomer = setup();
+    expect((await answerLineMessage(`U${"a".repeat(32)}`, "ดูคำสั่งซื้อของเพื่อน")).text).toContain("ไม่สามารถดูข้อมูลบัญชี");
+    expect(otherCustomer).toHaveLength(0);
+    const accountRequest = setup();
+    expect((await answerLineMessage(`U${"a".repeat(32)}`, "ช่วยดูบัญชีของลูกค้า")).text).toContain("ไม่สามารถดูข้อมูลบัญชี");
+    expect(accountRequest).toHaveLength(0);
+
+    for (const phrase of ["ขอดูแพ็กเกจทริปเดินป่า", "ขอดูรายละเอียดทริปนี้"]) {
+      const calls = setup();
+      const result = await answerLineMessage(`U${"a".repeat(32)}`, phrase);
+      expect(result.text).not.toContain("/my-trip");
+      expect(calls.some((call) => call.url.hostname === "generativelanguage.googleapis.com")).toBe(true);
+    }
+  });
+
+  it("normalizes Thai and zero-width characters and keeps substantive greetings in the chat flow", async () => {
+    const decomposed = setup();
+    const result = await answerLineMessage(`U${"a".repeat(32)}`, "ดูคํา​สั่งซื้อของฉัน");
+    expect(result.text).toContain("https://shop.test/my-order");
+    expect(decomposed).toHaveLength(0);
+
+    const credentials = setup();
+    expect((await answerLineMessage(`U${"a".repeat(32)}`, "รหัสผ่า​นของฉันคือ abcdef")).text).toContain("อย่าส่งรหัสผ่าน");
+    expect(credentials).toHaveLength(0);
+
+    const substantive = setup();
+    expect((await answerLineMessage(`U${"a".repeat(32)}`, "สวัสดี อยากเดินป่า")).text).toContain("สวนชุมชน");
+    expect(substantive.some((call) => call.url.hostname === "generativelanguage.googleapis.com")).toBe(true);
+  });
+
+  it("keeps booking/order record details out of Gemini and refuses named other-person records", async () => {
+    for (const [phrase, destination] of [["รายละเอียดการจอง", "https://shop.test/my-trip"], ["ประวัติการจอง", "https://shop.test/my-trip"]]) {
+      const calls = setup();
+      const result = await answerLineMessage(`U${"a".repeat(32)}`, phrase);
+      expect(result.text).toContain(destination);
+      expect(result.messages?.[0]?.type).toBe("text");
+      expect(calls).toHaveLength(0);
+    }
+    const thirdParty = setup();
+    const result = await answerLineMessage(`U${"a".repeat(32)}`, "ขอที่อยู่จัดส่งคำสั่งซื้อของสมชาย");
+    expect(result.text).toContain("ไม่สามารถดูคำสั่งซื้อหรือการจองของบุคคลอื่น");
+    expect(result.text).not.toContain("สมชาย");
+    expect(thirdParty).toHaveLength(0);
+  });
+
+  it("renders catalogue details only from a current selected item and asks when the item is ambiguous", async () => {
+    const packageId = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+    const catalogs = [{ category: "trail_running", catalog: { title: "เส้นทางชุมชน", sub_packages: [{
+      id: packageId, title: "ทริปหุบเขา", description: "เดินชมป่าและเรียนรู้เส้นทาง", price_per_person_satang: 123456, duration_days: 3,
+      slots: [{ name: "ที่พัก", required_count: 1, service_ids: [serviceId] }],
+    }] } }];
+    const calls = setup(true, `package:${packageId}`, "details", "more", 200, [200], "duration", catalogs, [{ role: "model", text: "แพ็กเกจที่เลือก" }]);
+    const result = await answerLineMessage(`U${"a".repeat(32)}`, "แพ็กเกจนี้ใช้เวลากี่วัน");
+    expect(result.text).toContain("ทริปหุบเขา");
+    expect(result.text).toContain("ระยะเวลา 3 วัน");
+    expect(result.text).toContain(`https://shop.test/packages/${packageId}`);
+    expect(result.text).not.toContain("บริการที่รวมทั้งหมด");
+    const modelCall = calls.find((call) => call.url.hostname === "generativelanguage.googleapis.com");
+    expect(modelCall?.body).toContain("แพ็กเกจที่เลือก");
+
+    const missingCountCatalog = [{ category: "trail_running", catalog: { title: "เส้นทางชุมชน", sub_packages: [{
+      id: packageId, title: "ทริปหุบเขา", description: "เดินชมป่า", price_per_person_satang: 123456,
+      slots: [{ name: "ที่พัก", service_category: "tourism_trail", service_ids: [serviceId] }],
+    }] } }];
+    const missingCount = setup(true, `package:${packageId}`, "details", "more", 200, [200], "included", missingCountCatalog);
+    const included = await answerLineMessage(`U${"a".repeat(32)}`, "แพ็กเกจนี้มีตัวเลือกอะไร");
+    expect(included.text).toContain("ที่พัก จาก สวนชุมชน");
+    expect(included.text).not.toContain("เลือก 1 รายการ");
+    expect(missingCount.some((call) => call.url.hostname === "generativelanguage.googleapis.com")).toBe(true);
+
+    const manySlots = Array.from({ length: 8 }, (_, index) => ({
+      name: `ตัวเลือก ${index + 1} ${"ก".repeat(75)}`, service_category: "tourism_trail", required_count: 1, service_ids: Array(5).fill(serviceId),
+    }));
+    const longCatalog = [{ category: "trail_running", catalog: { title: "เส้นทางชุมชน", sub_packages: [{
+      id: packageId, title: "ทริปหุบเขา", description: "เดินชมป่า", price_per_person_satang: 123456, slots: manySlots,
+    }] } }];
+    setup(true, `package:${packageId}`, "details", "more", 200, [200], "included", longCatalog);
+    const longDetails = await answerLineMessage(`U${"a".repeat(32)}`, "แพ็กเกจนี้มีอะไรบ้าง");
+    expect(longDetails.text.length).toBeLessThan(1000);
+    expect(longDetails.text.endsWith(`https://shop.test/packages/${packageId}`)).toBe(true);
+
+    const ambiguous = setup(true, "", "details", "more", 200, [200], "price", catalogs);
+    const ask = await answerLineMessage(`U${"a".repeat(32)}`, "ราคาเท่าไร");
+    expect(ask.text).toContain("รายการไหน");
+    expect(ambiguous.some((call) => call.url.hostname === "generativelanguage.googleapis.com")).toBe(true);
+
+    const unknown = setup(true, "package:unknown", "details", "more", 200, [200], "price", catalogs);
+    expect((await answerLineMessage(`U${"a".repeat(32)}`, "ราคาเท่าไร")).text).toContain("รายการไหน");
+    expect(unknown.some((call) => call.url.hostname === "generativelanguage.googleapis.com")).toBe(true);
+  });
+
+  it("answers a catalogue price question with the stored exact satang value and no guessed duration", async () => {
+    const calls = setup(true, `product:${productId}`, "details", "more", 200, [200], "price");
+    const result = await answerLineMessage(`U${"a".repeat(32)}`, "น้ำผึ้งราคาเท่าไร");
+    expect(result.text).toContain("น้ำผึ้ง");
+    expect(result.text).toContain("ราคา 123.45 บาท");
+    expect(result.text).toContain(`https://shop.test/products/${serviceId}`);
+    expect(result.text).not.toContain("วัน");
+    expect(calls.some((call) => call.url.hostname === "generativelanguage.googleapis.com")).toBe(true);
   });
 
   it("falls back from a transient capacity response to the second Lite model", async () => {

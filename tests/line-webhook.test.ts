@@ -84,10 +84,13 @@ describe("LINE webhook boundary", () => {
   it("forwards a bounded Flex answer after marking the durable reply attempt", async () => {
     vi.mocked(answerLineMessage).mockResolvedValue({
       status: "replied", text: "สวนชุมชน ราคา 123.45 บาท เดินชมสวน",
-      messages: [{ type: "flex", altText: "รายการแนะนำ: สวนชุมชน", contents: { type: "carousel", contents: [{
+      messages: [
+        { type: "text", text: "ตามที่เล่ามา รายการที่อาจตรงมีดังนี้", quickReply: { items: [{ type: "action", action: { type: "uri", label: "ดู My Order", uri: "https://shop.test/my-order" } }] } },
+        { type: "flex", altText: "รายการแนะนำ: สวนชุมชน", contents: { type: "carousel", contents: [{
         type: "bubble", size: "kilo", body: { type: "box", layout: "vertical", spacing: "sm", backgroundColor: "#fffdf8", contents: [] },
         footer: { type: "box", layout: "vertical", contents: [{ type: "button", style: "primary", height: "md", color: "#264830", action: { type: "uri", label: "ดูรายละเอียด", uri: "https://shop.test/services/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" } }] },
-      }] } }],
+      }] } },
+      ],
     });
     const calls = setup((name) => name === "claim_line_webhook_event" ? "claimed"
       : name === "mark_line_webhook_reply_attempt" ? true : name === "finish_line_webhook_event" ? true : null);
@@ -99,8 +102,12 @@ describe("LINE webhook boundary", () => {
     expect(markIndex).toBeGreaterThanOrEqual(0);
     expect(sendIndex).toBeGreaterThan(markIndex);
     const sent = JSON.parse(calls[sendIndex].body);
-    expect(sent.messages[0].type).toBe("flex");
-    expect(sent.messages[0].contents.contents).toHaveLength(1);
+    expect(sent.messages).toHaveLength(2);
+    expect(sent.messages[0].type).toBe("text");
+    expect(sent.messages[0].quickReply.items[0].action.uri).toBe("https://shop.test/my-order");
+    expect(sent.messages[1].type).toBe("flex");
+    expect(sent.messages[1].contents.contents).toHaveLength(1);
+    expect(calls.filter((call) => call.url.pathname.endsWith("/message/reply"))).toHaveLength(1);
     expect(vi.mocked(answerLineMessage)).toHaveBeenCalledTimes(1);
   });
 });

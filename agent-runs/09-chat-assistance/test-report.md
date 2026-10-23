@@ -37,3 +37,11 @@ No real LINE webhook/push or Gemini request was sent, and nothing was deployed. 
 - `PATH=/Users/suphakorninsee/.local/bin:$PATH npm run build` passed; Next.js included `/api/line/catalogue-image` and `/api/line/webhook` in the production route list.
 - Manager's LINE Flex Simulator checks used three public service rows with preview-only signed photo URL substitutions (`/tmp/line-chat-simulator-desktop.png`, `/tmp/line-chat-simulator-cards.png`), a long Thai title and price (`/tmp/line-chat-simulator-long.png`), and a no-image card (`/tmp/line-chat-simulator-no-image.png`). The local layout detector returned no findings. These previews do not verify a LINE device or an actual message send.
 - The independent Reviewer passed the local implementation and Simulator scope; live LINE acceptance remains pending.
+
+## Conversational behavior follow-up — 24 October 2026
+
+- `PATH=/Users/suphakorninsee/.local/bin:$PATH npx vitest run tests/chat-assistance.test.ts tests/line-webhook.test.ts tests/trip-feedback.test.ts` — 3 files, 37 tests passed. Coverage includes help/how-to without provider access, private-page navigation and named-person refusal, Thai normalization, substantive greetings, catalogue detail topics, intro plus Flex, and durable webhook forwarding.
+- `PATH=/Users/suphakorninsee/.local/bin:$PATH npm run typecheck`, `git diff --check`, and the final `npm run build` — passed. Production compilation includes LINE webhook/image and customer order/trip routes.
+- Private record details/history/status/address requests stop before database/history/Gemini access; public trip browsing and “วิธีการจองของที่พัก” remain public guidance. Missing option counts are not inferred, and long detail text preserves its final catalogue URL.
+- Gemini selects only a fixed detail topic and current catalogue IDs. Descriptions, exact satang prices and explicitly stored duration/options are rendered on the server; no arbitrary model-generated factual answer, transaction action or personal account lookup was added.
+- Independent Reviewer PASS after the routing corrections, scoped to local routing/model-boundary implementation. No real LINE/Gemini request, commit, push or deployment was performed for this follow-up; live classification and delivery remain pending.

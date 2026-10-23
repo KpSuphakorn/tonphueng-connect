@@ -4,7 +4,7 @@
 
 **Blocked by:** 04: Admin จัดแพ็กเกจ -> Customer เลือก slot; 06: Staff ลงสินค้า -> Customer จัดตะกร้า.
 
-**Status:** deferred-optional
+**Status:** implementation-complete-awaiting-live-acceptance
 
 **Priority:** optional — ทำเมื่อมีเวลาหลังงานหลัก 01–08 ไม่เป็นเงื่อนไขส่ง prototype; เกณฑ์ด้านล่างใช้เมื่อเลือกทำ
 
@@ -14,7 +14,7 @@
 
 ## Acceptance criteria
 
-- [ ] รับข้อความ LINE ผ่าน webhook ที่ตรวจ signature ก่อนประมวลผล และ event เดิมไม่สร้างผลซ้ำโดยไม่ตั้งใจ
+- [x] รับข้อความ LINE ผ่าน webhook ที่ตรวจ signature ก่อนประมวลผล และ event เดิมไม่สร้างผลซ้ำโดยไม่ตั้งใจ (local HTTP test; ดู [report](../../../agent-runs/09-chat-assistance/test-report.md))
 - [ ] Customer พิมพ์ข้อความอิสระและถามต่อได้ ผู้ช่วยมีบริบทเพียงพอสำหรับบทสนทนานั้นและถามเพิ่มเมื่อความต้องการยังไม่ชัด
 - [ ] คำแนะนำใช้ Product/Package/Service ที่แสดงต่อลูกค้าได้จริงจากฐานข้อมูล และเปิดกลับไปดูรายการที่อ้างถึงในเว็บได้
 - [ ] ไม่แต่งชื่อ ราคา วันว่าง เงื่อนไข หรือบริการที่ไม่มีข้อมูลรองรับ หากไม่พบหรือข้อมูลยังไม่พอให้บอกตรง ๆ หรือถามต่อ
@@ -26,6 +26,11 @@
 
 ## External prerequisites and evidence
 
-- ผู้ใช้ต้องยืนยันผู้ให้บริการ/โมเดล AI บัญชี API วงเงิน และสิทธิ์เรียกใช้ก่อนเกิดค่าใช้จ่าย
-- การตั้งค่า Messaging API, webhook และการส่งข้อความจริงต้องได้รับอนุญาตก่อน พร้อมข้อมูลรายการที่ใช้ตรวจความถูกต้องของคำแนะนำ
+- ใช้ Gemini stable Lite chain: `gemini-3.5-flash-lite` แล้วลอง `gemini-3.1-flash-lite` หนึ่งครั้งเมื่อ timeout/capacity response และยังเหลืองบเวลาใน provider budget รวม 8 วินาที; no paid/preview fallback. `GEMINI_MODEL` รับเฉพาะสองรุ่นนี้. เจ้าของยังต้องตั้ง key ที่ Vercel และตรวจ Free Tier/quota แยกตาม Google Project/model ก่อนเปิด flag
+- Migration 011 เพิ่ม app-side cap เป็น 50 logical requests ต่อ LINE user และ 1,000 ต่อวัน Asia/Bangkok; หนึ่ง logical request อาจมี provider attempts สูงสุดสองครั้ง. migration 010 และ 011 apply แล้วตามที่เจ้าของอนุญาตเมื่อ 23 ต.ค. 2569; ตรวจนิยาม cap และสิทธิ์ผ่าน SQL Editor แล้ว
+- การตั้งค่า Messaging API, webhook และการส่งข้อความจริงต้องตั้งโดยเจ้าของก่อน acceptance; ยังไม่มี live LINE/Gemini test
 - ไม่ต้องรอ Order หรือ Booking เสร็จเพราะแชทไม่มีสิทธิ์ทำธุรกรรมแทนผู้ใช้
+
+## Implementation evidence
+
+Implementation is local and default-off. Signature, duplicate-event behavior, constrained model request, whitelisted server rendering, typecheck and SQL migration ACL are recorded in the [Ticket 09 report](../../../agent-runs/09-chat-assistance/test-report.md). Remaining checklist items and live acceptance stay open.

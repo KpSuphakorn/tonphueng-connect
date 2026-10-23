@@ -2,6 +2,16 @@
 
 เอกสารอ้างอิง implementation ณ 23 ตุลาคม 2569 สำหรับผู้ดูแลและ agent ที่รับงานต่อ ข้อกำหนดอยู่ใน [spec](../.scratch/tonphueng-connect/spec.md) วิธีตั้งค่าอยู่ใน [setup](setup.md) และสถานะตรวจรับอยู่ใน ticket แต่ละใบ
 
+## สถานะส่งมอบล่าสุด — 23 ตุลาคม 2569
+
+งานหลัก Tickets 01–08 มี implementation และ deploy แล้วที่ commit `c9a70e3` ซึ่งตรงกับ `origin/main`; Vercel รายงาน deployment สำเร็จ เจ้าของยืนยันว่าระบบ UI และคู่มือพร้อมสำหรับเดโม Tickets 09–10 มี implementation ใน working tree แล้วแต่ยังปิดด้วยค่าเริ่มต้น; migrations 010–011 ใช้กับ Supabase จริงแล้วผ่าน SQL Editor ตามที่เจ้าของอนุญาตเมื่อ 23 ตุลาคม 2569 และยังไม่มี live LINE/Gemini acceptance
+
+หลักฐานเดิมสำหรับ Tickets 01–08: `npm test` ผ่าน 59/59 และ Playwright ผ่าน 22/22; รอบนั้น `npm run typecheck` และ `npm run build` ผ่าน การตรวจ production รอบนั้นเป็นแบบอ่านอย่างเดียว: หน้าแรก/login/services/products/packages, API สาธารณะ services/products/packages และคู่มือ PDF ตอบ 200; cart และ API จัดการ Admin ปฏิเสธคำขอที่ไม่มี session ด้วย 403 หลังเพิ่ม Tickets 09–10 ใน working tree รอบนี้ `npm test` ผ่าน 81/81, `npm run typecheck` และ `npm run build` ผ่าน; รอบนี้ไม่ได้รัน Playwright หรือ production checks ใหม่
+
+คู่มือ: [ดาวน์โหลด PDF](https://tonphueng-connect.vercel.app/manual), [HTML ต้นฉบับ](manual/manual.html) และรูปอ้างอิง 23 รายการมีครบ ตรวจดาวน์โหลด PDF และภาพปกแล้ว รอบนี้ไม่ได้ตรวจภาพทุกหน้าของ PDF หรือทดสอบ LINE บนมือถือจริงใหม่ ข้อความรอตรวจรับใน ticket/รายงานเดิมจึงยังเป็นขอบเขตหลักฐานของแต่ละรอบ ไม่ได้หมายความว่าฟีเจอร์นั้นยังไม่พัฒนา การชำระเงินยังเป็นแบบจำลอง และรอบนี้ไม่ได้ทดสอบธุรกรรมพร้อมกันหรือเขียนข้อมูลธุรกิจบน production
+
+สำหรับ agent ที่รับต่อ: ใช้หน้านี้อ่านพฤติกรรมปัจจุบัน, [setup](setup.md) สำหรับการตั้งค่า/ลิงก์ใช้งาน, [spec](../.scratch/tonphueng-connect/spec.md) สำหรับข้อกำหนด และ [CONTEXT.md](../CONTEXT.md) สำหรับคำศัพท์ ไม่ต้องเริ่มพัฒนางานหลักซ้ำจากข้อความรอตรวจรับเก่า
+
 ## โครงสร้างปัจจุบัน
 
 Next.js และ TypeScript แอปเดียว ใช้ Supabase Auth, PostgreSQL และ Storage; LINE LIFF ส่ง ID token ให้ server ตรวจยืนยันกับ LINE
@@ -126,11 +136,13 @@ Visual pass: ระบบหน้าตาตาม [DESIGN.md](../DESIGN.md) �
 
 ช่องรหัสผ่านทุกช่องมีปุ่มแสดง/ซ่อน (`PasswordField`) และฟอร์มหลักจำข้อความที่พิมพ์ไว้ใน sessionStorage ของหน้าต่าง LINE นั้น (`src/app/components/session-draft.ts`: สมัคร Staff, อีเมลเข้าสู่ระบบ, วิธีรับ/ที่อยู่ในตะกร้า, ตัวเลือก/วันที่/จำนวนคนของแพ็กเกจ, สินค้าใหม่, ข้อมูลกิจการ, อีเมล Admin ใหม่) ไม่เก็บรหัสผ่าน token หรือไฟล์ ล้างเมื่อส่งสำเร็จ และถ้าข้อมูลบน server เปลี่ยน ค่าจาก server ชนะ
 
-## งานที่ยังไม่พัฒนา
+## ขอบเขตที่เลื่อนและข้อจำกัดการตรวจรับ
 
-งานหลักที่เหลือคือการตรวจรับ Tickets 07–08 บน LINE จริง ส่วน Ticket 09 (AI chat) และ 10 (Feedback) เป็น optional ทำเมื่อมีเวลา Tickets 04–05 ใช้ migrations 005–006 กับ Supabase จริงแล้วและรอ hosted workflow acceptance; Ticket 06 ใช้ migration 007 แล้วและรอ hosted workflow acceptance รายละเอียดอยู่ใน [tickets เดิม](../.scratch/tonphueng-connect/issues/)
+Ticket 09 ตรวจลายเซ็น LINE webhook, จำกัด context/quota, ส่งเฉพาะข้อความที่ตัดข้อมูลส่วนตัวแล้วและ public catalogue snippets ไป Gemini, และ render ข้อเท็จจริง/ลิงก์จาก ID ที่เลือกได้เท่านั้น; ไม่มีการทำ Order/Booking. Ticket 10 อ้างอิง `Booking.end_date`, claim ต่อ booking แบบ unique, ใช้ retry key เดิม และเก็บ feedback ด้วยรหัสที่ลูกค้าส่งกลับอย่างชัดเจน. ทั้งสอง feature default-off. ดู [Ticket 09](../.scratch/tonphueng-connect/issues/09-chat-assistance.md), [Ticket 10](../.scratch/tonphueng-connect/issues/10-trip-feedback.md), [ผลทดสอบ 09](../agent-runs/09-chat-assistance/test-report.md) และ [ผลทดสอบ 10](../agent-runs/10-trip-feedback/test-report.md)
+
+Migrations 010–011 ใช้กับ Supabase จริงแล้วเมื่อ 23 ตุลาคม 2569; ตรวจ metadata หลัง apply ผ่าน 11/11 ข้อ รวม RLS, grants, immutable trigger และเพดานใหม่ โดยไม่ได้เรียก Gemini/LINE หรือสร้างข้อมูลธุรกิจ. ก่อนเปิด feature เจ้าของต้องตั้งค่าความลับ LINE/Gemini/Cron ใน Vercel และเปิด flag เฉพาะหลังตรวจ acceptance จริง. Ticket 09 ใช้ stable Lite chain `gemini-3.5-flash-lite` แล้ว fallback หนึ่งครั้งเป็น `gemini-3.1-flash-lite` เฉพาะ timeout/capacity response ภายใน provider budget รวม 8 วินาที; `GEMINI_MODEL` รับเฉพาะสองรุ่นนี้. Migration 011 เพิ่ม app-side cap เป็น 50 logical requests ต่อ LINE user และ 1,000 ต่อวันตามเวลา Bangkok โดยหนึ่ง logical request อาจมี provider attempts ได้สูงสุดสองครั้ง; เพดานใหม่นี้มีผลในฐานข้อมูลแล้ว แต่ feature flags ยังปิดอยู่. Gemini Free Tier มี quota จริงแยกตาม Google Project/model และอาจใช้ข้อมูลเพื่อปรับปรุงผลิตภัณฑ์; คีย์บน paid plan อาจเกิดค่าใช้จ่ายได้แม้แอปมี caps. LINE รับคำขอ push สำเร็จไม่ได้ยืนยันว่าลูกค้าได้รับข้อความ. Checklist live และข้อจำกัดหลักฐานยังเปิดอยู่ใน tickets.
 
 
-ข้อมูลเดโม: [`scripts/seed-demo.ts`](../scripts/seed-demo.ts) สร้าง/อัปเดต/ลบ Staff เดโม 12 บัญชี (`demo-…@example.com`) พร้อม Service, รูป, สินค้า 9 ชิ้น และ Sub Package เดโมแบบ idempotent โดยไม่ทับ Sub Package จริง วิธีใช้และเครดิตรูปอยู่ใน [setup](setup.md#5-demo-data); ยังไม่ได้รันกับ Supabase จริง
+ข้อมูลเดโม: [`scripts/seed-demo.ts`](../scripts/seed-demo.ts) สร้าง/อัปเดต/ลบ Staff เดโม 12 บัญชี (`demo-…@example.com`) พร้อม Service, รูป, สินค้า 9 ชิ้น และ Sub Package เดโมแบบ idempotent โดยไม่ทับ Sub Package จริง วิธีใช้และเครดิตรูปอยู่ใน [setup](setup.md#5-demo-data) ปัจจุบัน API production มีข้อมูลให้แสดงแล้ว; การตรวจรอบนี้ไม่ได้รัน seed หรือยืนยันประวัติการสร้างข้อมูลแต่ละรายการ
 
 ข้อมูลธุรกิจที่ยังขาดใช้ข้อมูลเดโมได้ โดย UI ไม่ติดป้ายเดโมตาม UI labelling update ใน spec (ยังแสดงเครดิตรูปตามสัญญาอนุญาต) ระบบบันทึกและตรวจสิทธิ์ยังทำงานจริง การตั้งค่า/การอนุญาตบริการภายนอกยังค้างตาม [ตารางของ spec](../.scratch/tonphueng-connect/spec.md#ข้อมูลและการตั้งค่าที่ยังรอ)

@@ -108,7 +108,9 @@ MVP รอบนี้ครอบคลุมงานหลัก Tickets 01�
 - ใช้ Supabase PostgreSQL สำหรับข้อมูลจริง ใช้ Storage สำหรับรูปภาพ และใช้ Auth สำหรับอีเมล/รหัสผ่านของ Staff/Admin
 - ใช้ LIFF กับ LINE Login สำหรับ Customer ส่วน Messaging API รับแชทและส่งข้อความตอบ/ขอ Feedback; LINE OA และช่องทางที่เกี่ยวข้องใช้ Provider เดียวกัน โดยบัญชีอยู่ภายใต้การดูแลของผู้ใช้ก่อน
 - ภาษาในหน้าที่ใช้สาธิตเป็นภาษาไทยและใช้งานจากมือถือผ่าน LINE ได้ ชื่อเมนูหลักสอดคล้องกับสเปกและ glossary
-- เลือก Railway Free สำหรับ hosting ตามสถานะในตารางข้อมูลค้าง ส่วน AI เป็น optional และยังไม่เลือกผู้ให้บริการ/รุ่นโมเดล การตั้งค่า การเขียนข้อมูลภายนอก และค่าใช้จ่ายต้องได้รับอนุญาต
+- ใช้ Vercel สำหรับ hosting; Ticket 10 ใช้ daily Cron ที่อยู่ใน Hobby plan ได้ แต่ต้องตั้ง `CRON_SECRET` และคง `FEEDBACK_ENABLED=false` จนเจ้าของตั้งค่าและตรวจรับ LINE จริง
+- Ticket 09 ใช้ Gemini API ผ่าน HTTPS REST, โมเดลเริ่มต้น `gemini-3.5-flash-lite`; `LINE_CHAT_ENABLED` ปิดเป็นค่าเริ่มต้น, จำกัดบริบท/ข้อความ/ผลลัพธ์และ quota ฝั่ง server, ไม่ส่ง LINE ID หรือข้อมูลบัญชี/ธุรกรรมให้โมเดล และแสดงข้อเท็จจริงจาก ID ที่ server อนุญาตเท่านั้น
+- Gemini API Free Tier มี quota ตาม Google Project และ Google อาจใช้ข้อมูลจาก Free Tier เพื่อปรับปรุงผลิตภัณฑ์; Free Tier ไม่ได้ยืนยันว่าคีย์ใน project นี้เป็น free เสมอ จึงห้ามส่งข้อมูลลับ/ข้อมูลส่วนตัว และเจ้าของต้องตรวจ plan/quota ก่อนตั้งค่า key
 
 ### ตัวตนและสิทธิ์
 
@@ -238,8 +240,8 @@ MVP รอบนี้ครอบคลุมงานหลัก Tickets 01�
 | LINE | สร้าง OA “ผึ้งพาเดิน” และ Provider “Tonphueng Connect” แล้ว; มี LINE Login และ Messaging API ภายใต้ Provider เดียวกัน | LIFF app/ID, HTTPS endpoint, บัญชี LINE ทดสอบ และการตั้งค่า webhook/access token สำหรับแชทภายหลังอนุญาต; ค่าลับเก็บนอกเอกสาร |
 | Supabase | สร้างและเชื่อมโครงการ `tonphueng-connect` แล้ว; identity migration 001 ใช้จริงและตรวจสิทธิ์แล้ว | อนุญาตใช้ migration 002 สำหรับกิจการ/รูปส่วนตัว/การอนุมัติ แล้วตรวจ Auth, Storage และข้อมูลจริง; รายละเอียดหลักฐานอยู่ใน test reports |
 | บัญชีเริ่มต้น | มีขั้นตอน bootstrap Admin; ตามหลักฐานยังไม่ได้สร้างบัญชีจริง และ Staff ต้องรออนุมัติ | ยืนยันอีเมล Admin เริ่มต้นและบัญชีทดสอบที่เจ้าของควบคุม พร้อมสร้าง/ผูก LINE หลังอนุญาต; รหัสผ่านกรอกผ่านขั้นตอนส่วนตัว |
-| AI (optional) | ทำเมื่อมีเวลาหลังงานหลัก ไม่ขวางต้นแบบ | หากเลือกทำ จึงเลือกผู้ให้บริการ/โมเดล บัญชี API วิธีเก็บ key และวงเงินที่ได้รับอนุญาต |
-| งานตั้งเวลา/hosting | เลือก Railway Free ใน project เดิม; ครั้งล่าสุดเพิ่ม service ไม่ได้เพราะ upstream issue | งานหลักยังต้องมี HTTPS service ที่ได้รับอนุญาต deploy; scheduler/การส่งข้อความ Feedback ต้องเตรียมเฉพาะเมื่อทำ optional และไม่อนุญาตค่าใช้จ่ายโดยอัตโนมัติ |
+| AI (optional) | ใช้ stable Lite chain `gemini-3.5-flash-lite` → `gemini-3.1-flash-lite` เมื่อ timeout/capacity error ภายใน 8 วินาที; default-off; migration 011 กำหนดเพดานแอป 1,000 logical requests/วัน และ 50/คน ตามเวลา Bangkok | ต้องตั้ง key ส่วนตัวที่ Vercel, ตรวจว่า Google Project ใช้ Free Tier และโควตาพอ; โควต้า Google ยังเป็นข้อจำกัดแยกจากเพดานแอป และถ้าใช้ project เดียวกับ LINE Cal จะใช้โควต้าของ project ร่วมกัน; ห้ามส่งข้อมูลลับหรือส่วนตัวเพราะ Google อาจใช้ Free Tier data เพื่อปรับปรุงผลิตภัณฑ์ |
+| งานตั้งเวลา/hosting | ใช้ Vercel Cron วันละครั้งใน `sin1`; Feedback default-off และ migrations 010–011 ใช้กับระบบจริงแล้ว 23 ต.ค. 2569 ตามที่เจ้าของอนุญาต | ก่อนเปิดใช้ ต้องตั้ง `CRON_SECRET`, LINE Messaging API credentials และตรวจรับด้วยบัญชีทดสอบของเจ้าของ; cron ใช้ Vercel Hobby daily schedule และไม่รับประกันเวลาทำงานตรงนาที |
 
 รายการข้อมูลธุรกิจในตารางใช้ข้อมูลเดโมที่ผู้ใช้อนุญาตแทนได้ รายการบัญชี/การตั้งค่า integration ที่ยังไม่พร้อมต้องรายงานว่า pending; AI และงานตั้งเวลา/ส่ง Feedback เป็น optional และไม่ขวางการส่งงานหลัก
 

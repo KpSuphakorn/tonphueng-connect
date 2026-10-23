@@ -53,7 +53,11 @@ export default async function HomePage() {
           <p>ข้อมูลจะแสดงเมื่อผู้ดูแลและผู้ประกอบการเพิ่มรายการ</p>
         </div>
         <div className="cards">
-          {offers.map((offer) => offer.number === "03" ? (
+          {offers.map((offer) => offer.number === "01" ? (
+            <Link className="feature-card feature-card-link" href="/packages" key={offer.number}>
+              <span className="feature-mark" aria-hidden="true">{offer.number}</span><span className="feature-card-copy"><span className="feature-card-title">{offer.title}</span><span>{offer.description}</span><span className="availability">ดูแพ็กเกจ</span></span>
+            </Link>
+          ) : offer.number === "03" ? (
             <Link className="feature-card feature-card-link" href="/services" key={offer.number}>
               <span className="feature-mark" aria-hidden="true">{offer.number}</span><span className="feature-card-copy"><span className="feature-card-title">{offer.title}</span><span>{offer.description}</span><span className="availability">เลือกดูบริการ</span></span>
             </Link>
@@ -75,7 +79,7 @@ export default async function HomePage() {
 
       <section className="section note-card" aria-label="ข้อมูล My Trip">
         <strong>ทริปและรายการของคุณ</strong>
-        <p style={{ margin: "6px 0 0" }}>เข้าสู่ระบบด้วย LINE เพื่อดู My Trip และ My Order ของคุณ ข้อมูลจะแสดงเมื่อมีรายการบันทึกหรือจองแล้ว</p>
+        <p style={{ margin: "6px 0 0" }}>{isCustomer ? "เปิด My Trip เพื่อดูสถานที่และตัวเลือกแพ็กเกจที่บันทึกไว้ ส่วน My Order ใช้ติดตามคำสั่งซื้อสินค้า" : "เข้าสู่ระบบด้วย LINE เพื่อดู My Trip และ My Order ของคุณ ข้อมูลจะแสดงเมื่อมีรายการบันทึกหรือจองแล้ว"}</p>
       </section>
 
       <nav className="bottom-nav" aria-label="เมนูลูกค้า">

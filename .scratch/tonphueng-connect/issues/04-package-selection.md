@@ -4,7 +4,7 @@
 
 **Blocked by:** 03: Staff ลงบริการ -> Customer ค้นหาและบันทึกสถานที่.
 
-**Status:** ready-for-agent
+**Status:** implementation-complete-awaiting-live-acceptance
 
 **Spec:** [Approved spec](../spec.md)
 
@@ -25,3 +25,7 @@
 - ใช้ Package/Sub Package/slot สูตรราคา ระยะเวลาทริป วันให้บริการ และช่องทางติดต่อเดโมตามนโยบาย prototype ใน spec ได้ ไม่ต้องรอข้อมูลธุรกิจจริงเพื่อส่งต้นแบบ
 - เกณฑ์ที่กล่าวถึงข้อมูลหรือสูตรที่ยืนยันใน ticket นี้ใช้ชุดข้อมูลเดโมที่บันทึกและคำนวณจริงได้ โดยระบุว่าเป็นตัวอย่าง
 - ไม่ใช้ราคา เส้นทาง หรือโปรแกรมใน archive/แบบจำลองการเงินเป็นข้อสรุปแทนทีม
+
+- 2026-10-23: Local review condition resolved: restored choices are filtered against current options, and the browser flow verifies replacing a saved Service after Admin changes the catalog. Manager verified the correction; no additional blocking pricing/authorization/atomicity finding remains. Migration 005 and hosted acceptance remain pending owner authorization. See the existing test report.
+
+- 2026-10-23: Owner authorized migration and release. Migration 005 applied after PostgreSQL-only variable/column qualification corrections; RLS/grants and actual RPC validation/CAS/price/upsert probes passed and were rolled back. No durable business data was seeded. Full hosted Admin/Customer workflow acceptance remains pending; details are in the existing report.

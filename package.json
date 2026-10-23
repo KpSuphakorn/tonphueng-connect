@@ -10,8 +10,8 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run tests/auth.test.ts tests/staff-approval.test.ts tests/service-discovery.test.ts tests/staff-photo-uploads.test.ts",
-    "test:watch": "vitest tests/auth.test.ts tests/staff-approval.test.ts tests/service-discovery.test.ts tests/staff-photo-uploads.test.ts",
+    "test": "vitest run tests/auth.test.ts tests/staff-approval.test.ts tests/service-discovery.test.ts tests/staff-photo-uploads.test.ts tests/packages.test.ts",
+    "test:watch": "vitest tests/auth.test.ts tests/staff-approval.test.ts tests/service-discovery.test.ts tests/staff-photo-uploads.test.ts tests/packages.test.ts",
     "test:e2e": "playwright test",
     "bootstrap-admin": "tsx scripts/bootstrap-admin.ts"
   },

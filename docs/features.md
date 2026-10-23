@@ -56,7 +56,9 @@ Next.js และ TypeScript แอปเดียว ใช้ Supabase Auth, P
 
 ## งานที่ยังไม่พัฒนา
 
-งานหลักที่เหลือคือ Tickets 04–08: แพ็กเกจ/Booking, สินค้า/Order และเชิญ Admin ส่วน Ticket 09 (AI chat) และ 10 (Feedback) เป็น optional ทำเมื่อมีเวลา รายละเอียดอยู่ใน [tickets เดิม](../.scratch/tonphueng-connect/issues/)
+งานหลักที่เหลือคือ Tickets 05–08: Booking, สินค้า/Order และเชิญ Admin ส่วน Ticket 09 (AI chat) และ 10 (Feedback) เป็น optional ทำเมื่อมีเวลา Ticket 04 ใช้ migration 005 กับ Supabase จริงแล้ว และรอ hosted workflow acceptance ตามรายงาน รายละเอียดอยู่ใน [tickets เดิม](../.scratch/tonphueng-connect/issues/)
+
+Ticket 04 is implemented locally: Admin can edit the three Package categories and typed Sub Package slots; Customers can browse, choose eligible active Staff services, and save/reload a selection. The demo price is an Admin-entered per-person amount in integer satang; this ticket records a selection only and does not create a Booking or take payment. The package catalogue and selection use migration 005, applied to the connected project on 2026-10-23. PostgreSQL RLS/grants and RPC probes passed with probe data rolled back; application HTTP/browser checks use loopback doubles, and live Admin/Customer workflow acceptance remains pending. See the [Ticket 04 report](../agent-runs/04-package-selection/test-report.md).
 
 Ticket 03 เพิ่ม `GET /api/services?category=...` พร้อม filter, offset pagination, optional GPS distance ordering, detail/gallery, and customer-owned My Trip saves. Omitting `category` shows all categories; an invalid supplied value returns 400. List and detail expose only services owned by active Staff. GPS ordering loads the filtered catalogue before slicing so each page follows one global distance order; move this sort into Postgres if the catalogue grows substantially. Migration 003 adds the Service description and private saved-service relation; it was applied to the connected Supabase project on 2026-10-23 with schema and access checks verified. Live application acceptance remains pending. Local checks and remaining acceptance are recorded in the [Ticket 03 report](../agent-runs/03-service-discovery/test-report.md).
 

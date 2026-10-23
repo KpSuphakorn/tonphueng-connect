@@ -53,7 +53,8 @@ export default async function AdminPage() {
         <LogoutButton />
       </header>
       <p className="eyebrow">ADMIN WORKSPACE</p>
-      <h1>ตรวจสอบผู้ประกอบการ</h1>
+      <div className="admin-workspace-heading"><div><h1>พื้นที่ผู้ดูแล</h1><p className="form-help">ตรวจสอบผู้ประกอบการและจัดการ Package</p></div><Link className="button button-secondary" href="/admin/packages">จัดการแพ็กเกจ</Link></div>
+      <h2>ตรวจสอบผู้ประกอบการ</h2>
       {applicantLoadError ? <section className="protected-card" role="alert"><p className="error-message">ไม่สามารถโหลดรายการสมัครได้ กรุณาลองใหม่</p></section> : <StaffApproval applicants={applicants} />}
     </main>
   );

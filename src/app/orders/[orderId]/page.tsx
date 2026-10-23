@@ -10,7 +10,7 @@ const baht = (satang: number) => new Intl.NumberFormat("th-TH", { style: "curren
 /** Display steps follow the stored statuses in order; pickup wording changes only the labels. */
 function steps(order: ProductOrder) {
   const pickup = order.fulfillment === "pickup";
-  return ["รอชำระ", "ชำระแล้ว (จำลอง)", "ร้านกำลังเตรียม", pickup ? "พร้อมรับที่ร้าน" : "กำลังจัดส่ง", pickup ? "รับสินค้าเรียบร้อย" : "ส่งเรียบร้อย"];
+  return ["รอชำระ", "ชำระแล้ว", "ร้านกำลังเตรียม", pickup ? "พร้อมรับที่ร้าน" : "กำลังจัดส่ง", pickup ? "รับสินค้าเรียบร้อย" : "ส่งเรียบร้อย"];
 }
 
 export default async function OrderPage({ params }: { params: Promise<{ orderId: string }> }) {
@@ -26,7 +26,7 @@ export default async function OrderPage({ params }: { params: Promise<{ orderId:
     <header className="topbar"><Link href="/my-order" className="top-link">← My Order</Link><Link href="/" className="brand">ผึ้งพาเดิน · คำสั่งซื้อ</Link></header>
     <p className="eyebrow">ORDER #{order.id.slice(0, 8)}</p>
     <h1>{order.store_name}</h1>
-    {order.payment_status === "paid_simulated" && <p><span className="status-badge status-paid-demo">ชำระเงินแล้ว (จำลอง)</span></p>}
+    {order.payment_status === "paid_simulated" && <p><span className="status-badge status-paid-demo">ชำระเงินแล้ว</span></p>}
     <ol className="order-steps" aria-label="สถานะคำสั่งซื้อ">{steps(order).map((label, index) => {
       const current = ORDER_STATUSES.indexOf(order.status);
       return <li key={label} className={index < current ? "done" : index === current ? "current" : undefined} aria-current={index === current ? "step" : undefined}>{label}</li>;
@@ -40,7 +40,7 @@ export default async function OrderPage({ params }: { params: Promise<{ orderId:
       </li>)}</ul>
       <p><strong>วิธีรับสินค้า:</strong> {order.fulfillment === "delivery" ? "จัดส่ง" : "รับที่ร้าน"}</p>
       {order.fulfillment === "delivery" && <p><strong>ที่อยู่จัดส่ง:</strong> {order.delivery_address}</p>}
-      <dl className="cart-total-list"><div><dt>ราคาสินค้า</dt><dd>{baht(order.subtotal_satang)}</dd></div><div><dt>ค่าส่ง</dt><dd>{baht(order.shipping_satang)}{order.fulfillment === "delivery" && <small> ค่าส่งเดโมคงที่</small>}</dd></div><div className="cart-grand-total"><dt>ยอดรวมจากระบบ</dt><dd>{baht(order.total_satang)}</dd></div></dl>
+      <dl className="cart-total-list"><div><dt>ราคาสินค้า</dt><dd>{baht(order.subtotal_satang)}</dd></div><div><dt>ค่าส่ง</dt><dd>{baht(order.shipping_satang)}{order.fulfillment === "delivery" && <small> ค่าส่งคงที่</small>}</dd></div><div className="cart-grand-total"><dt>ยอดรวมจากระบบ</dt><dd>{baht(order.total_satang)}</dd></div></dl>
       {order.fulfillment === "delivery" && <p><strong>เลขพัสดุ:</strong> {order.tracking_number ?? "ร้านยังไม่ได้กรอก"}</p>}
     </section>
     <OrderPayment order={order} />

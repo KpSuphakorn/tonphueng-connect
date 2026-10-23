@@ -93,8 +93,8 @@ export function PackageOptions({ packageView, canSelect, savedSelection }: { pac
       {canSelect && complete && packageView.revision > 0 && <div className="booking-fields">
         <label className="field"><span>วันเริ่มทริป <span className="required-marker" aria-hidden="true">*</span></span><input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} required disabled={busy} min={new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date())} /></label>
         <label className="field"><span>จำนวนผู้เข้าร่วม <span className="required-marker" aria-hidden="true">*</span></span><input type="number" min="1" max="100" step="1" value={participants} onChange={(event) => setParticipants(Number(event.target.value))} required disabled={busy} /></label>
-        <p className="form-help">ระบุ 1–100 คน วันที่อนาคตใช้สาธิตได้ แต่ระบบยังไม่ตรวจสอบช่วงว่างจริงหรือความจุ</p>
-        <button className="button button-primary" type="button" disabled={busy || !startDate || participants < 1 || participants > 100} onClick={() => void createBooking()}>{busy ? "กำลังตรวจสอบราคา…" : "ตรวจราคาและไปหน้าจ่ายจำลอง"}</button>
+        <p className="form-help">ระบุ 1–100 คน และเลือกวันที่ในอนาคต</p>
+        <button className="button button-primary" type="button" disabled={busy || !startDate || participants < 1 || participants > 100} onClick={() => void createBooking()}>{busy ? "กำลังตรวจสอบราคา…" : "ตรวจราคาและไปหน้าชำระเงิน"}</button>
       </div>}
       {message && <p className={message.startsWith("บันทึกตัวเลือกแล้ว") ? "success-message" : "error-message"} role="status">{message}</p>}
     </section>

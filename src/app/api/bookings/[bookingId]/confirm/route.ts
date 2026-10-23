@@ -11,6 +11,6 @@ export async function POST(request: Request, context: { params: Promise<{ bookin
   if (!account) return response(403, { error: "กรุณาเข้าสู่ระบบด้วยบัญชีลูกค้า" });
   const { bookingId } = await context.params;
   if (!/^[0-9a-f-]{36}$/i.test(bookingId)) return response(404, { error: "ไม่พบรายการจอง" });
-  try { return response(200, { booking: await confirmPackageBooking(account.id, bookingId), message: "ยืนยันการจ่ายเงินจำลองแล้ว" }); }
+  try { return response(200, { booking: await confirmPackageBooking(account.id, bookingId), message: "ชำระเงินเรียบร้อย" }); }
   catch { return response(404, { error: "ไม่พบรายการจองของคุณ" }); }
 }

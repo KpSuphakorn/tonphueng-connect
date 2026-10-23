@@ -10,10 +10,10 @@ export function BookedTrips({ bookings, places }: { bookings: Booking[]; places:
       const snapshot = booking.package_snapshot as { sub_package_title?: string };
       const selected = places.filter((place) => place.booking_id === booking.id);
       return <article className="booking-summary" key={booking.id}>
-        <span className="availability">{booking.status === "paid_simulated" ? "จ่ายจำลองแล้ว" : "รอยืนยันจ่ายจำลอง"} · {booking.start_date} – {booking.end_date}</span>
+        <span className="availability">{booking.status === "paid_simulated" ? "ชำระเงินแล้ว" : "รอชำระเงิน"} · {booking.start_date} – {booking.end_date}</span>
         <h3>{snapshot.sub_package_title || "Sub Package"}</h3>
         {booking.my_trip_added_at ? <ul>{selected.map((place) => <li key={`${booking.id}-${place.service_id}`}><strong>{place.service_snapshot.name}</strong> — {place.service_snapshot.address}</li>)}</ul>
-          : <p>{booking.status === "paid_simulated" ? "ยังไม่ได้เพิ่มสถานที่เข้า My Trip" : "เปิดรายการเพื่อทบทวนราคาและยืนยันการจ่ายจำลอง"}</p>}
+          : <p>{booking.status === "paid_simulated" ? "ยังไม่ได้เพิ่มสถานที่เข้า My Trip" : "เปิดรายการเพื่อทบทวนราคาและชำระเงิน"}</p>}
         <Link className="text-link" href={`/bookings/${booking.id}`}>ดูรายละเอียดการจอง</Link>
       </article>;
     })}

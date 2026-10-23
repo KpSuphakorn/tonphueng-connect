@@ -16,7 +16,7 @@ export default async function AdminBookingsPage() {
     {!bookings.length ? <section className="note-card">ยังไม่มีการจอง</section> : bookings.map((booking) => {
       const snapshot = booking.package_snapshot as { sub_package_title?: string; package_title?: string };
       return <article className="booking-summary" key={booking.id}>
-        <span className="availability">{booking.status === "paid_simulated" ? "จ่ายจำลองแล้ว" : "รอยืนยัน"} · {booking.start_date} – {booking.end_date}</span>
+        <span className="availability">{booking.status === "paid_simulated" ? "ชำระเงินแล้ว" : "รอยืนยัน"} · {booking.start_date} – {booking.end_date}</span>
         <h2>{snapshot.sub_package_title || "Sub Package"}</h2><p>{snapshot.package_title} · {booking.participants} คน · {baht(booking.total_price_satang)}</p>
         <Link className="text-link" href={`/bookings/${booking.id}`}>ดูรายละเอียดและตัวเลือกที่บันทึกไว้</Link>
       </article>;

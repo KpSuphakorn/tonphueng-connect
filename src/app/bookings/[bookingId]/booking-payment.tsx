@@ -21,17 +21,13 @@ export function BookingPayment({ booking: initial }: { booking: Booking }) {
   }
   return <section className="section booking-payment">
     {booking.status === "pending" ? <>
-      <h2>QR Payment จำลอง</h2>
-      <p className="error-message">DEMO เท่านั้น · QR ตัวอย่างนี้สแกนชำระเงินจริงไม่ได้ และระบบไม่ได้ตรวจสอบยอดกับธนาคาร</p>
-      <svg className="demo-qr" viewBox="0 0 120 120" role="img" aria-label="ลวดลาย QR ตัวอย่างที่ใช้ชำระเงินจริงไม่ได้">
-        <rect width="120" height="120" fill="white" />
-        <path fill="#20352b" d="M8 8h36v36H8zm8 8v20h20V16zm60-8h36v36H76zm8 8v20h20V16zM8 76h36v36H8zm8 8v20h20V84zM52 8h8v8h-8zm8 16h8v8h-8zm-8 16h16v8H52zm8 12h8v8h-8zm16 0h8v8h-8zm16 0h8v8h-8zm20 0h8v8h-8zM48 60h8v8h-8zm16 0h8v8h-8zm16 0h8v8h-8zm16 0h8v8h-8zM52 76h8v8h-8zm16 0h8v8h-8zm16 8h8v8h-8zm16-8h8v8h-8zm-40 16h8v8h-8zm16 8h8v8h-8zm16 4h8v8h-8zm16-8h8v8h-8z" />
-        <text x="60" y="116" textAnchor="middle" fontSize="6" fill="#a23b34">DEMO</text>
-      </svg>
-      <label className="package-choice"><input type="checkbox" checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} /><span>ฉันเข้าใจว่านี่เป็นการสาธิตและไม่มีการโอนเงินจริง <span className="required-marker" aria-hidden="true">*</span></span></label>
-      <button className="button button-primary" type="button" disabled={busy || !acknowledged} onClick={() => void post(`/api/bookings/${booking.id}/confirm`)}>{busy ? "กำลังบันทึก…" : "ยืนยันจ่ายเงินจำลอง"}</button>
+      <h2>ชำระเงินผ่าน QR</h2>
+      <p className="form-help">สแกน QR เพื่อชำระเงิน</p>
+      <img className="demo-qr" src="/demo-qr.png" width={144} height={144} alt="QR สำหรับชำระเงิน" />
+      <label className="package-choice"><input type="checkbox" checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} /><span>ฉันตรวจสอบรายการและยอดชำระแล้ว <span className="required-marker" aria-hidden="true">*</span></span></label>
+      <button className="button button-primary" type="button" disabled={busy || !acknowledged} onClick={() => void post(`/api/bookings/${booking.id}/confirm`)}>{busy ? "กำลังบันทึก…" : "ยืนยันการชำระเงิน"}</button>
     </> : <>
-      <h2>ยืนยันจ่ายเงินจำลองแล้ว</h2><p>ไม่มีการรับเงินจริงหรือการตรวจยอดจากธนาคาร</p>
+      <h2>ชำระเงินเรียบร้อย</h2>
       {booking.my_trip_added_at ? <p className="success-message">เพิ่มสถานที่จากแพ็กเกจเข้า My Trip แล้ว</p> : <button className="button button-primary" type="button" disabled={busy} onClick={() => void post(`/api/bookings/${booking.id}/my-trip`)}>{busy ? "กำลังเพิ่ม…" : "เพิ่มสถานที่ทั้งหมดเข้า My Trip"}</button>}
     </>}
     {message && <p className={failed ? "error-message" : "success-message"} role="status">{message}</p>}

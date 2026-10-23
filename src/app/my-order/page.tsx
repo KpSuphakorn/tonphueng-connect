@@ -54,11 +54,11 @@ export default async function MyOrderPage({ searchParams }: { searchParams: Prom
             })}
           </nav>
           {!shown.length ? (
-            <section className="section note-card"><strong>{orders.length ? `ไม่มีคำสั่งซื้อในแท็บ “${tab.label}”` : "ยังไม่มีคำสั่งซื้อ"}</strong><p style={{ margin: "6px 0 0" }}>เลือกสินค้าชุมชนลงตะกร้า แล้วสั่งซื้อและจ่ายเงินจำลองได้</p><Link href="/products" className="button button-primary" style={{ marginTop: 14 }}>เลือกร้านสินค้า</Link></section>
+            <section className="section note-card"><strong>{orders.length ? `ไม่มีคำสั่งซื้อในแท็บ “${tab.label}”` : "ยังไม่มีคำสั่งซื้อ"}</strong><p style={{ margin: "6px 0 0" }}>เลือกสินค้าชุมชนลงตะกร้า แล้วสั่งซื้อและชำระเงินได้</p><Link href="/products" className="button button-primary" style={{ marginTop: 14 }}>เลือกร้านสินค้า</Link></section>
           ) : (
             <section className="section" aria-label={`คำสั่งซื้อ: ${tab.label}`}>
               {shown.map((order) => <article className="booking-summary" key={order.id}>
-                <p className="order-card-head"><span className={`status-badge status-${order.status}`}>{badge(order)}</span>{order.payment_status === "paid_simulated" && <span className="status-badge status-paid-demo">ชำระเงินแล้ว (จำลอง)</span>}</p>
+                <p className="order-card-head"><span className={`status-badge status-${order.status}`}>{badge(order)}</span>{order.payment_status === "paid_simulated" && <span className="status-badge status-paid-demo">ชำระเงินแล้ว</span>}</p>
                 <h2>{order.store_name}</h2>
                 <p>{order.items.map((item) => `${item.product_name} × ${item.quantity}`).join(", ")}</p>
                 <p><strong>ยอดรวม:</strong> {baht(order.total_satang)} · {order.fulfillment === "delivery" ? "จัดส่ง" : "รับที่ร้าน"}</p>

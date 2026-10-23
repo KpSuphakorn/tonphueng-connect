@@ -142,7 +142,8 @@ test("Customer buys for delivery, pays by simulation, Staff updates tracking, an
   await expect(page.getByText("บ้านเลขที่ 12 บ้านต้นผึ้ง")).toBeVisible();
   await expect(page.locator(".cart-grand-total")).toContainText("426.50");
   await expect(page.locator('.order-steps [aria-current="step"]')).toHaveText("รอชำระ");
-  await expect(page.getByText(/สแกนชำระเงินจริงไม่ได้.*ไม่ได้ตรวจสอบยอดกับธนาคาร/)).toBeVisible();
+  await expect(page.getByText("สแกน QR เพื่อชำระเงิน")).toBeVisible();
+  await expect(page.getByText(/จำลอง|ตัวอย่าง|เดโม|DEMO|สาธิต/)).toHaveCount(0);
   expect(customerCart).toBeNull();
   await screenshot(page, "tonphueng-order-payment");
 
@@ -170,17 +171,17 @@ test("Customer buys for delivery, pays by simulation, Staff updates tracking, an
   await page.goto("/my-order?tab=to-pay");
   await expect(page.locator(".status-badge")).toHaveText("รอชำระเงิน");
   await page.getByRole("link", { name: "ไปชำระเงิน" }).click();
-  await page.getByRole("checkbox", { name: /เข้าใจว่านี่เป็นการสาธิต/ }).check();
-  await page.getByRole("button", { name: "ยืนยันจ่ายเงินจำลอง" }).click();
-  await expect(page.getByRole("heading", { name: "ยืนยันจ่ายเงินจำลองแล้ว" })).toBeVisible();
+  await page.getByRole("checkbox", { name: /ตรวจสอบรายการและยอดชำระแล้ว/ }).check();
+  await page.getByRole("button", { name: "ยืนยันการชำระเงิน" }).click();
+  await expect(page.getByRole("heading", { name: "ชำระเงินเรียบร้อย" })).toBeVisible();
   const paidAt = orders.get(orderId)?.paid_at;
   const again = await call(page, `/api/orders/${orderId}/confirm`, "POST", {});
   expect(again.status).toBe(200);
   expect(again.body.order?.paid_at).toBe(paidAt);
   await page.reload();
-  await expect(page.getByRole("heading", { name: "ยืนยันจ่ายเงินจำลองแล้ว" })).toBeVisible();
-  await expect(page.locator(".status-badge.status-paid-demo")).toHaveText("ชำระเงินแล้ว (จำลอง)");
-  await expect(page.locator('.order-steps [aria-current="step"]')).toHaveText("ชำระแล้ว (จำลอง)");
+  await expect(page.getByRole("heading", { name: "ชำระเงินเรียบร้อย" })).toBeVisible();
+  await expect(page.locator(".status-badge.status-paid-demo")).toHaveText("ชำระเงินแล้ว");
+  await expect(page.locator('.order-steps [aria-current="step"]')).toHaveText("ชำระแล้ว");
 
   await signIn(page, "other-staff-session");
   await page.goto("/staff/orders");
@@ -205,7 +206,7 @@ test("Customer buys for delivery, pays by simulation, Staff updates tracking, an
   await page.goto("/my-order");
   await page.reload();
   await expect(page.locator(".status-badge").first()).toHaveText("กำลังจัดส่ง");
-  await expect(page.locator(".status-badge.status-paid-demo")).toHaveText("ชำระเงินแล้ว (จำลอง)");
+  await expect(page.locator(".status-badge.status-paid-demo")).toHaveText("ชำระเงินแล้ว");
   await expect(page.getByText("TH123456789TH")).toBeVisible();
   await expect(page.getByText("น้ำผึ้งป่า × 3")).toBeVisible();
   await page.getByRole("link", { name: /^สำเร็จ/ }).click();
@@ -227,9 +228,9 @@ test("Pickup Order is completed by Staff without a tracking number", async ({ pa
   const orderId = page.url().split("/").at(-1)!;
   await expect(page.locator(".cart-grand-total")).toContainText("125.50");
   await expect(page.locator(".order-steps")).toContainText("พร้อมรับที่ร้าน");
-  await page.getByRole("checkbox", { name: /เข้าใจว่านี่เป็นการสาธิต/ }).check();
-  await page.getByRole("button", { name: "ยืนยันจ่ายเงินจำลอง" }).click();
-  await expect(page.getByRole("heading", { name: "ยืนยันจ่ายเงินจำลองแล้ว" })).toBeVisible();
+  await page.getByRole("checkbox", { name: /ตรวจสอบรายการและยอดชำระแล้ว/ }).check();
+  await page.getByRole("button", { name: "ยืนยันการชำระเงิน" }).click();
+  await expect(page.getByRole("heading", { name: "ชำระเงินเรียบร้อย" })).toBeVisible();
 
   await signIn(page, "staff-session");
   await page.goto("/staff/orders");

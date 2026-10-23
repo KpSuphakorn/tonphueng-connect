@@ -17,12 +17,12 @@ export default async function StaffOrdersPage() {
   return <main className="page-wrap">
     <header className="topbar"><Link href="/staff" className="brand"><span className="brand-mark" aria-hidden="true">ผ</span> ผึ้งพาเดิน · ผู้ประกอบการ</Link><LogoutButton /></header>
     <h1>คำสั่งซื้อของร้าน</h1>
-    <p className="lead">แสดงเฉพาะคำสั่งซื้อของร้านคุณที่ลูกค้ายืนยันจ่ายเงินจำลองแล้ว (ไม่มีการรับเงินจริง) อัปเดตสถานะเพื่อให้ลูกค้าติดตามใน My Order</p>
+    <p className="lead">แสดงเฉพาะคำสั่งซื้อของร้านคุณที่ลูกค้าชำระเงินแล้ว อัปเดตสถานะเพื่อให้ลูกค้าติดตามใน My Order</p>
     {failed ? <p className="error-message" role="alert">โหลดคำสั่งซื้อไม่สำเร็จ กรุณาลองใหม่</p>
       : orders === null ? <p className="note-card">บัญชีนี้ยังไม่มีร้านประเภทสินค้าชุมชน จึงยังไม่มีคำสั่งซื้อสินค้า</p>
       : !orders.length ? <p className="note-card">ยังไม่มีคำสั่งซื้อที่รอดำเนินการ</p>
       : orders.map((order) => <article className="booking-summary" key={order.id} aria-label={`คำสั่งซื้อ ${order.id.slice(0, 8)}`}>
-        <span className="availability">คำสั่งซื้อ #{order.id.slice(0, 8)} · จ่ายจำลองเมื่อ {dateTime(order.paid_at)}</span>
+        <span className="availability">คำสั่งซื้อ #{order.id.slice(0, 8)} · ชำระเงินเมื่อ {dateTime(order.paid_at)}</span>
         <ul className="cart-line-list">{order.items.map((item) => <li key={item.product_id}>
           <span className="cart-line-name"><strong>{item.product_name}</strong><small>{baht(item.unit_price_satang)} × {item.quantity}</small></span>
           <span>จำนวน {item.quantity}</span>

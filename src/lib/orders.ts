@@ -6,7 +6,7 @@ export const STAFF_ORDER_STATUSES = ["preparing", "shipping", "delivered"] as co
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 export type StaffOrderStatus = (typeof STAFF_ORDER_STATUSES)[number];
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
-  pending_payment: "รอยืนยันจ่ายเงินจำลอง",
+  pending_payment: "รอชำระเงิน",
   paid: "รอร้านรับออเดอร์",
   preparing: "กำลังเตรียมของ",
   shipping: "กำลังไปส่งของ",

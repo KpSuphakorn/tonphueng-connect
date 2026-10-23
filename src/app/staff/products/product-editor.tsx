@@ -77,7 +77,7 @@ export function ProductEditor() {
       <label className="field"><span>รูปสินค้า {!editing && <span className="required-marker" aria-hidden="true">*</span>}</span><input required={!editing} type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => { const next = event.target.files?.[0] ?? null; setFile(next); setPreview(next ? URL.createObjectURL(next) : ""); }} /></label>
       <p className="form-help"><span className="required-marker" aria-hidden="true">*</span> จำเป็นต้องกรอก</p>
       <p className="form-help">เลือกภาพเดียว ระบบจัดเก็บแบบส่วนตัวและปรับเป็น WebP</p>
-      {(preview || editing?.photo_url) && <img className="product-editor-photo" src={preview || editing?.photo_url} alt="ตัวอย่างรูปสินค้า" />}
+      {(preview || editing?.photo_url) && <img className="product-editor-photo" src={preview || editing?.photo_url} alt="รูปสินค้าที่เลือก" />}
       {error && <p className="error-message" role="alert">{error}</p>}{notice && <p className="success-message" role="status">{notice}</p>}
       <div className="product-form-actions"><button className="button button-primary" disabled={busy}>{busy ? "กำลังบันทึก…" : editing ? "บันทึกการแก้ไข" : "เพิ่มสินค้า"}</button>{editing && <button className="button button-secondary" type="button" disabled={busy} onClick={reset}>ยกเลิกการแก้ไข</button>}</div>
     </form>

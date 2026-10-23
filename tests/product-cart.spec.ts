@@ -219,13 +219,13 @@ test("Staff uploads one private Product photo and Customer maintains a server-pr
   await expect(page.getByText("น้ำผึ้งป่า อยู่ในตะกร้าแล้ว")).toBeVisible();
   await page.goto("/cart");
   await expect(page.locator(".cart-total-list").getByText("260.00", { exact: false }).first()).toBeVisible();
-  await page.getByLabel("จัดส่ง · ค่าส่งเดโม ฿50.00").check();
+  await page.getByLabel("จัดส่ง · ค่าส่ง ฿50.00").check();
   await page.getByLabel("ที่อยู่จัดส่ง").fill("บ้านเลขที่ 12 บ้านต้นผึ้ง");
   await page.getByRole("button", { name: "บันทึกตะกร้าและคำนวณใหม่" }).click();
   await expect(page.getByText("ยอดรวมปัจจุบัน")).toBeVisible();
   await expect(page.getByText("฿310.00", { exact: false })).toBeVisible();
   await page.reload();
-  await expect(page.getByLabel("จัดส่ง · ค่าส่งเดโม ฿50.00")).toBeChecked();
+  await expect(page.getByLabel("จัดส่ง · ค่าส่ง ฿50.00")).toBeChecked();
   if (screenshotDir) {
     await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
     await page.screenshot({ path: `${screenshotDir}/tonphueng-cart-delivery-mobile.png`, fullPage: true });

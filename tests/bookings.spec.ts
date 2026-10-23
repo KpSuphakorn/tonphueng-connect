@@ -102,12 +102,12 @@ test("Customer reviews the server price, confirms the demo, and adds the booked 
   await page.getByLabel("วันเริ่มทริป").fill("2099-01-15");
   await page.getByLabel("จำนวนผู้เข้าร่วม").fill("2");
   failNextCreateResponse = true;
-  await page.getByRole("button", { name: "ตรวจราคาและไปหน้าจ่ายจำลอง" }).click();
+  await page.getByRole("button", { name: "ตรวจราคาและไปหน้าชำระเงิน" }).click();
   await expect(page.getByText("บันทึกการจองไม่สำเร็จ กรุณาลองใหม่")).toBeVisible();
-  await page.getByRole("button", { name: "ตรวจราคาและไปหน้าจ่ายจำลอง" }).click();
+  await page.getByRole("button", { name: "ตรวจราคาและไปหน้าชำระเงิน" }).click();
   expect(bookings.size).toBe(1);
   await expect(page.locator(".booking-summary p").filter({ hasText: "ยอดรวมจากระบบ" })).toContainText("2,501.00");
-  await expect(page.getByText(/ตรวจสอบยอดกับธนาคาร/)).toBeVisible();
+  await expect(page.getByText("สแกน QR เพื่อชำระเงิน")).toBeVisible();
   if (screenshotDir) {
     await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
     await page.screenshot({ path: `${screenshotDir}/tonphueng-booking-mobile.png`, fullPage: true });
@@ -116,12 +116,12 @@ test("Customer reviews the server price, confirms the demo, and adds the booked 
     await page.setViewportSize({ width: 390, height: 844 });
   }
   await page.goto("/my-trip");
-  await expect(page.getByText(/รอยืนยันจ่ายจำลอง/)).toBeVisible();
+  await expect(page.getByText(/รอชำระเงิน/)).toBeVisible();
   await page.getByRole("link", { name: "ดูรายละเอียดการจอง" }).click();
   await expect(page.getByRole("heading", { name: "เดินป่าสองวัน" })).toBeVisible();
-  await page.getByRole("checkbox", { name: /เข้าใจว่านี่เป็นการสาธิต/ }).check();
-  await page.getByRole("button", { name: "ยืนยันจ่ายเงินจำลอง" }).click();
-  await expect(page.getByText("ยืนยันจ่ายเงินจำลองแล้ว")).toBeVisible();
+  await page.getByRole("checkbox", { name: /ตรวจสอบรายการและยอดชำระแล้ว/ }).check();
+  await page.getByRole("button", { name: "ยืนยันการชำระเงิน" }).click();
+  await expect(page.getByRole("heading", { name: "ชำระเงินเรียบร้อย" })).toBeVisible();
   await page.getByRole("button", { name: "เพิ่มสถานที่ทั้งหมดเข้า My Trip" }).click();
   await expect(page.getByText("เพิ่มสถานที่ทั้งหมดเข้า My Trip แล้ว")).toBeVisible();
   await page.goto("/my-trip");

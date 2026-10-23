@@ -11,9 +11,9 @@ export default async function PackagesPage() {
   return (
     <main className="page-wrap">
       <header className="topbar"><Link href="/" className="brand"><span className="brand-mark" aria-hidden="true">ผ</span> ผึ้งพาเดิน · แพ็กเกจ</Link><Link href="/" className="top-link">หน้าหลัก</Link></header>
-      <p className="eyebrow">EXPERIENCE PACKAGES · ข้อมูลตัวอย่าง</p>
+      <p className="eyebrow">EXPERIENCE PACKAGES</p>
       <h1>เลือกประสบการณ์ของชุมชน</h1>
-      <p className="lead">ราคาและตัวเลือกเป็นข้อมูลตัวอย่างที่ผู้ดูแลโครงการบันทึกไว้ ราคาที่แสดงเป็นราคาต่อคนและยังไม่ใช่การจอง</p>
+      <p className="lead">ราคาและตัวเลือกกำหนดโดยผู้ดูแลโครงการ ราคาที่แสดงเป็นราคาต่อคนและยังไม่ใช่การจอง</p>
       {failed ? <p className="error-message" role="alert">โหลดแพ็กเกจไม่สำเร็จ กรุณาลองใหม่</p> : (
         <div className="package-category-grid">
           {categories.map((category) => (

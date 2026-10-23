@@ -19,7 +19,7 @@ export default async function BookingPage({ params }: { params: Promise<{ bookin
   const snapshot = booking.package_snapshot as { package_title?: string; sub_package_title?: string; duration_days?: number; choices?: Array<{ slot_name?: string; service?: { name?: string; address?: string } }> };
   return <main className="page-wrap">
     <header className="topbar"><Link href={account.role === "admin" ? "/admin/bookings" : "/my-trip"} className="top-link">← กลับ</Link><Link href="/" className="brand">ผึ้งพาเดิน · รายละเอียดการจอง</Link></header>
-    <p className="eyebrow">BOOKING · {booking.status === "paid_simulated" ? "จ่ายจำลองแล้ว" : "รอยืนยัน"}</p>
+    <p className="eyebrow">BOOKING · {booking.status === "paid_simulated" ? "ชำระเงินแล้ว" : "รอยืนยัน"}</p>
     <h1>{snapshot.sub_package_title || "Sub Package"}</h1><p className="lead">{snapshot.package_title} · รายการจองเก็บข้อมูลแพ็กเกจและบริการ ณ วันที่สร้าง</p>
     <section className="booking-summary">
       <p><strong>วันเริ่มทริป:</strong> {booking.start_date} · <strong>วันสิ้นสุด:</strong> {booking.end_date} ({snapshot.duration_days ?? 1} วัน)</p>

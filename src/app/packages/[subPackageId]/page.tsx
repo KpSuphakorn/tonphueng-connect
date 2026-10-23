@@ -27,10 +27,10 @@ export default async function PackageDetailsPage({ params }: { params: Promise<{
   return (
     <main className="page-wrap">
       <header className="topbar"><Link href="/packages" className="top-link">← แพ็กเกจ</Link><Link href="/" className="brand">ผึ้งพาเดิน · {category.category_title}</Link></header>
-      <p className="eyebrow">{category.category_title} · ข้อมูลตัวอย่าง</p>
+      <p className="eyebrow">{category.category_title}</p>
       <h1>{subPackage.title}</h1>
       <p className="lead">{subPackage.description}</p>
-      <section className="package-detail-price"><span>ราคาตัวอย่างต่อคน</span><strong>{new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(subPackage.price_per_person_satang / 100)}</strong><small>ระยะเวลา {subPackage.duration_days} วัน · ระบบคำนวณยอดจากจำนวนผู้เข้าร่วมและแสดงยอดที่บันทึกก่อนยืนยันจ่ายจำลอง</small></section>
+      <section className="package-detail-price"><span>ราคาต่อคน</span><strong>{new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(subPackage.price_per_person_satang / 100)}</strong><small>ระยะเวลา {subPackage.duration_days} วัน · ระบบคำนวณยอดจากจำนวนผู้เข้าร่วมและแสดงยอดที่บันทึกก่อนชำระเงิน</small></section>
       <PackageOptions packageView={packageView} canSelect={isCustomer} savedSelection={saved} />
       {category.contact_url && <p><a className="text-link" href={category.contact_url} target="_blank" rel="noreferrer">สอบถามแพ็กเกจเพิ่มเติม ↗</a></p>}
       {!isCustomer && <p className="form-help">เข้าสู่ระบบด้วยบัญชี Customer เพื่อบันทึกตัวเลือกนี้</p>}

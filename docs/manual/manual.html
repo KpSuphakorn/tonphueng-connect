@@ -1,0 +1,676 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>คู่มือการใช้งาน ผึ้งพาเดิน</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Mitr:wght@400;500&display=block" rel="stylesheet">
+<style>
+  :root {
+    --forest: #264830;
+    --forest-soft: #3d6447;
+    --cream: #f7f1e3;
+    --paper: #fffdf7;
+    --honey: #e8b23a;
+    --honey-soft: #fbefd0;
+    --ink: #22362a;
+    --muted: #5f6f63;
+    --line: #e2dccb;
+  }
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    font-family: "IBM Plex Sans Thai", sans-serif;
+    color: var(--ink);
+    background: var(--cream);
+    font-size: 10.5pt;
+    line-height: 1.65;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  h1, h2, h3 { font-family: "Mitr", sans-serif; font-weight: 500; color: var(--forest); margin: 0; line-height: 1.35; }
+
+  .page {
+    width: 210mm;
+    height: 297mm;
+    padding: 16mm 16mm 14mm;
+    position: relative;
+    overflow: hidden;
+    page-break-after: always;
+    background: var(--cream);
+  }
+  .page:last-child { page-break-after: auto; }
+  .folio {
+    position: absolute;
+    left: 16mm; right: 16mm; bottom: 8mm;
+    display: flex; justify-content: space-between;
+    font-size: 8pt; color: var(--muted);
+    border-top: 1px solid var(--line);
+    padding-top: 2.5mm;
+  }
+
+  /* Cover */
+  .cover { padding: 0; background: var(--forest); color: var(--cream); }
+  .cover-photo {
+    height: 170mm;
+    background: url("images/cover.jpg") center 40% / cover no-repeat;
+    position: relative;
+  }
+  .cover-photo::after {
+    content: "";
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(38,72,48,0) 55%, var(--forest) 100%);
+  }
+  .cover-body { padding: 0 18mm; margin-top: -26mm; position: relative; }
+  .cover-logo {
+    width: 30mm; height: 30mm; border-radius: 50%;
+    border: 1.2mm solid var(--cream);
+    background: #fff;
+    object-fit: cover;
+  }
+  .cover h1 { color: var(--cream); font-size: 32pt; margin-top: 7mm; }
+  .cover .tagline { font-size: 14pt; margin: 2mm 0 9mm; color: #e9e2cf; }
+  .cover .roles { display: flex; gap: 3mm; flex-wrap: wrap; margin-bottom: 10mm; }
+  .cover .roles span {
+    border: 0.35mm solid rgba(247,241,227,.55);
+    border-radius: 99px;
+    padding: 1.2mm 4.5mm;
+    font-size: 10.5pt;
+  }
+  .cover .meta { font-size: 10pt; color: #d6cfbb; line-height: 1.8; }
+  .cover .meta strong { color: var(--honey); font-weight: 600; }
+
+  /* Section opener */
+  .section-head { display: flex; align-items: baseline; gap: 4mm; margin-bottom: 2mm; }
+  .section-num {
+    font-family: "Mitr", sans-serif; font-size: 11pt; color: var(--forest);
+    background: var(--honey); border-radius: 99px; padding: .6mm 4mm;
+  }
+  .section-head h2 { font-size: 22pt; }
+  .section-lead { color: var(--muted); margin: 0 0 7mm; max-width: 150mm; }
+
+  /* Steps */
+  .steps { display: grid; grid-template-rows: 1fr 1fr; gap: 6mm; height: 236mm; }
+  .steps.one { grid-template-rows: 1fr; }
+  .steps.one .step { grid-template-columns: 74mm 1fr; padding: 8mm 9mm 8mm 8mm; }
+  .steps.one .phone { width: 74mm; }
+  .step {
+    display: grid;
+    grid-template-columns: 50mm 1fr;
+    gap: 8mm;
+    align-items: center;
+    background: var(--paper);
+    border: 0.3mm solid var(--line);
+    border-radius: 5mm;
+    padding: 5mm 7mm 5mm 5mm;
+    min-height: 0;
+  }
+  .phone {
+    width: 50mm;
+    border-radius: 6mm;
+    padding: 1.6mm;
+    background: #1d2a21;
+    box-shadow: 0 1.5mm 4mm rgba(34,54,42,.18);
+  }
+  .phone img {
+    display: block; width: 100%;
+    aspect-ratio: 390 / 844;
+    object-fit: cover; object-position: top;
+    border-radius: 4.6mm;
+  }
+  .step-no {
+    display: inline-grid; place-items: center;
+    width: 8mm; height: 8mm; border-radius: 50%;
+    background: var(--forest); color: var(--cream);
+    font-family: "Mitr", sans-serif; font-size: 10pt;
+    margin-bottom: 3mm;
+  }
+  .step h3 { font-size: 14pt; margin-bottom: 2.5mm; }
+  .step p { margin: 0 0 2.5mm; }
+  .step ul { margin: 0; padding-left: 5mm; }
+  .step li { margin-bottom: 1.4mm; }
+  .step li::marker { color: var(--honey); }
+  .tip {
+    margin-top: 3mm;
+    background: var(--honey-soft);
+    border-left: 1.2mm solid var(--honey);
+    border-radius: 0 2mm 2mm 0;
+    padding: 2mm 3.5mm;
+    font-size: 9.5pt;
+  }
+  b, strong { font-weight: 600; color: var(--forest); }
+
+  /* Intro page */
+  .intro-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5mm; margin: 6mm 0 9mm; }
+  .role-card {
+    background: var(--paper); border: 0.3mm solid var(--line); border-radius: 5mm;
+    padding: 6mm 5mm;
+  }
+  .role-card h3 { font-size: 13pt; margin-bottom: 2mm; }
+  .role-card .how { font-size: 9pt; color: var(--forest-soft); background: #eef3ea; border-radius: 99px; padding: .8mm 3mm; display: inline-block; margin-bottom: 3mm; }
+  .role-card ul { margin: 0; padding-left: 4.5mm; font-size: 9.8pt; }
+  .toc { background: var(--paper); border: 0.3mm solid var(--line); border-radius: 5mm; padding: 6mm 8mm; }
+  .toc h3 { font-size: 13pt; margin-bottom: 3mm; }
+  .toc ol { margin: 0; padding-left: 5mm; columns: 2; column-gap: 10mm; }
+  .toc li { margin-bottom: 1.5mm; break-inside: avoid; }
+  .access { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; margin-top: 7mm; }
+  .access div { background: var(--forest); color: var(--cream); border-radius: 5mm; padding: 5mm 6mm; }
+  .access h3 { color: var(--honey); font-size: 12pt; margin-bottom: 1.5mm; }
+  .access p { margin: 0; font-size: 9.8pt; }
+
+  /* Closing */
+  .faq { display: grid; gap: 4mm; }
+  .faq div { background: var(--paper); border: 0.3mm solid var(--line); border-radius: 4mm; padding: 4.5mm 6mm; }
+  .faq h3 { font-size: 12pt; margin-bottom: 1.5mm; }
+  .faq p { margin: 0; }
+</style>
+</head>
+<body>
+
+<!-- Cover -->
+<section class="page cover">
+  <div class="cover-photo"></div>
+  <div class="cover-body">
+    <img class="cover-logo" src="images/logo.jpeg" alt="">
+    <h1>คู่มือการใช้งาน<br>ผึ้งพาเดิน</h1>
+    <p class="tagline">ช่องทางซื้อสินค้าชุมชนและจองประสบการณ์ของบ้านต้นผึ้ง จ.เชียงใหม่ ผ่าน LINE</p>
+    <div class="roles"><span>ลูกค้า</span><span>ผู้ประกอบการชุมชน</span><span>ผู้ดูแลโครงการ</span></div>
+    <p class="meta">
+      เปิดใช้งาน: <strong>LINE OA “ผึ้งพาเดิน”</strong> หรือ <strong>tonphueng-connect.vercel.app</strong><br>
+      ระบบ Tonphueng Connect · ฉบับ 24 ตุลาคม 2569
+    </p>
+  </div>
+</section>
+
+<!-- Intro -->
+<section class="page">
+  <div class="section-head"><span class="section-num">เริ่มต้น</span><h2>ใครใช้ส่วนไหน</h2></div>
+  <p class="section-lead">ระบบเดียวใช้ได้ 3 บทบาท เลือกประเภทบัญชีที่หน้าเข้าสู่ระบบ แต่ละบทบาทเห็นเฉพาะข้อมูลของตนเอง</p>
+
+  <div class="intro-grid">
+    <div class="role-card">
+      <h3>ลูกค้า</h3>
+      <span class="how">เข้าด้วยบัญชี LINE</span>
+      <ul>
+        <li>ดูบริการ ที่พัก ร้านอาหาร เส้นทาง</li>
+        <li>ซื้อสินค้าชุมชน เลือกรับที่ร้านหรือจัดส่ง</li>
+        <li>จองแพ็กเกจประสบการณ์</li>
+        <li>ติดตามใน My Order และ My Trip</li>
+      </ul>
+    </div>
+    <div class="role-card">
+      <h3>ผู้ประกอบการชุมชน</h3>
+      <span class="how">อีเมล + รหัสผ่าน</span>
+      <ul>
+        <li>สมัครและรอผู้ดูแลอนุมัติ</li>
+        <li>แก้ข้อมูลกิจการและรูป</li>
+        <li>ลงสินค้า ราคา และรูป</li>
+        <li>รับคำสั่งซื้อ อัปเดตสถานะและเลขพัสดุ</li>
+      </ul>
+    </div>
+    <div class="role-card">
+      <h3>ผู้ดูแลโครงการ</h3>
+      <span class="how">อีเมล + รหัสผ่าน + LINE</span>
+      <ul>
+        <li>อนุมัติผู้ประกอบการ</li>
+        <li>จัดแพ็กเกจและตัวเลือก</li>
+        <li>ดูรายการจองทั้งหมด</li>
+        <li>เพิ่มผู้ดูแลคนใหม่</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="toc">
+    <h3>ในคู่มือนี้</h3>
+    <ol>
+      <li>ลูกค้า: เข้าสู่ระบบและหน้าหลัก</li>
+      <li>ลูกค้า: ดูบริการของชุมชน</li>
+      <li>ลูกค้า: ซื้อสินค้าชุมชน</li>
+      <li>ลูกค้า: ชำระเงินและติดตามคำสั่งซื้อ</li>
+      <li>ลูกค้า: จองแพ็กเกจ</li>
+      <li>ลูกค้า: My Trip</li>
+      <li>ผู้ประกอบการ: สมัครและรออนุมัติ</li>
+      <li>ผู้ประกอบการ: ข้อมูลกิจการและสินค้า</li>
+      <li>ผู้ประกอบการ: จัดการคำสั่งซื้อ</li>
+      <li>ผู้ดูแล: อนุมัติและจัดแพ็กเกจ</li>
+      <li>ผู้ดูแล: รายการจองและเพิ่มผู้ดูแล</li>
+      <li>คำถามที่พบบ่อย</li>
+    </ol>
+  </div>
+
+  <div class="access">
+    <div>
+      <h3>เมนูด้านล่างของลูกค้า</h3>
+      <p><b style="color:var(--cream)">หน้าหลัก</b> · <b style="color:var(--cream)">My Trip</b> สถานที่และทริปที่จอง · <b style="color:var(--cream)">My Order</b> คำสั่งซื้อสินค้า</p>
+    </div>
+    <div>
+      <h3>ข้อมูลไม่หาย</h3>
+      <p>รายการจอง คำสั่งซื้อ และสถานที่ที่บันทึกไว้ เก็บในบัญชีของคุณ ปิดแล้วเปิดใหม่ยังอยู่ครบ</p>
+    </div>
+  </div>
+  <div class="folio"><span>ผึ้งพาเดิน · คู่มือการใช้งาน</span><span>2</span></div>
+</section>
+
+<!-- Customer 1 -->
+<section class="page">
+  <div class="section-head"><span class="section-num">ลูกค้า</span><h2>เข้าสู่ระบบและหน้าหลัก</h2></div>
+  <p class="section-lead">เปิดจากเมนูใน LINE OA “ผึ้งพาเดิน” ไม่ต้องสมัครสมาชิกหรือตั้งรหัสผ่าน</p>
+  <div class="steps">
+    <div class="step">
+      <div class="phone"><img src="images/01-customer-login-choice.jpg" alt=""></div>
+      <div>
+        <span class="step-no">1</span>
+        <h3>เลือก “ลูกค้า” แล้วเข้าด้วย LINE</h3>
+        <ul>
+          <li>แตะ <b>ลูกค้า</b> แล้วกด <b>ดำเนินการด้วย LINE</b></li>
+          <li>ครั้งแรก LINE จะขออนุญาตใช้ตัวตน ให้กดยินยอม</li>
+          <li>ครั้งต่อไประบบจำบัญชีไว้ เข้าได้ทันที</li>
+        </ul>
+        <p class="tip">ถ้าเปิดจากเบราว์เซอร์ ระบบจะพาไปหน้า LINE ให้ล็อกอินก่อน แล้วกลับมาที่แอปเอง</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="phone"><img src="images/02-customer-home.jpg" alt=""></div>
+      <div>
+        <span class="step-no">2</span>
+        <h3>หน้าหลัก</h3>
+        <p>เลือกสิ่งที่ต้องการจากการ์ด 3 ใบ</p>
+        <ul>
+          <li><b>แพ็กเกจชุมชน</b>: ประสบการณ์และเส้นทางเรียนรู้</li>
+          <li><b>สินค้าชุมชน</b>: เลือกร้านแล้วสั่งซื้อ</li>
+          <li><b>บริการของเรา</b>: ที่พัก ร้านอาหาร เส้นทางท่องเที่ยว</li>
+        </ul>
+        <p class="tip">แถบเมนูด้านล่างอยู่ทุกหน้า กดกลับหน้าหลัก My Trip หรือ My Order ได้ตลอด</p>
+      </div>
+    </div>
+  </div>
+  <div class="folio"><span>ผึ้งพาเดิน · ลูกค้า</span><span>3</span></div>
+</section>
+
+<!-- Customer 2 -->
+<section class="page">
+  <div class="section-head"><span class="section-num">ลูกค้า</span><h2>ดูบริการของชุมชน</h2></div>
+  <p class="section-lead">รวมกิจการที่ผ่านการอนุมัติแล้ว เลื่อนลงเรื่อย ๆ เพื่อดูรายการเพิ่ม</p>
+  <div class="steps">
+    <div class="step">
+      <div class="phone"><img src="images/03-customer-services-list.jpg" alt=""></div>
+      <div>
+        <span class="step-no">3</span>
+        <h3>ค้นหาและกรองบริการ</h3>
+        <ul>
+          <li>เลือก <b>ประเภทบริการ</b>: สินค้าชุมชน ที่พัก ร้านอาหาร การท่องเที่ยว/เส้นทางเดินป่า หรืออื่น ๆ</li>
+          <li>กด <b>เรียงตามระยะใกล้</b> แล้วอนุญาตตำแหน่ง เพื่อดูที่ใกล้คุณก่อน</li>
+          <li>ระยะที่แสดงเป็นระยะเส้นตรง ไม่ใช่ระยะเดินทางจริง</li>
+        </ul>
+        <p class="tip">ไม่อนุญาตตำแหน่งก็ดูและกรองบริการได้ตามปกติ</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="phone"><img src="images/04-customer-service-detail.jpg" alt=""></div>
+      <div>
+        <span class="step-no">4</span>
+        <h3>รายละเอียดบริการ</h3>
+        <ul>
+          <li>เลื่อนดูรูปด้วยปุ่มซ้าย/ขวา</li>
+          <li>กด <b>เปิดพิกัดใน Google Maps</b> เพื่อนำทาง</li>
+          <li>กด <b>บันทึกเข้า My Trip</b> เพื่อเก็บสถานที่ไว้ดูภายหลัง</li>
+        </ul>
+        <p class="tip">การบันทึกสถานที่ไม่ใช่การจอง หากต้องการจองให้ใช้เมนูแพ็กเกจ</p>
+      </div>
+    </div>
+  </div>
+  <div class="folio"><span>ผึ้งพาเดิน · ลูกค้า</span><span>4</span></div>
+</section>
+
+<!-- Customer 3 -->
+<section class="page">
+  <div class="section-head"><span class="section-num">ลูกค้า</span><h2>ซื้อสินค้าชุมชน</h2></div>
+  <p class="section-lead">หนึ่งคำสั่งซื้อซื้อได้จากร้านเดียว ถ้าเปลี่ยนร้าน ระบบจะถามก่อนล้างตะกร้าเดิม</p>
+  <div class="steps">
+    <div class="step">
+      <div class="phone"><img src="images/05-customer-product-stores.jpg" alt=""></div>
+      <div>
+        <span class="step-no">5</span>
+        <h3>เลือกร้าน</h3>
+        <ul>
+          <li>หน้ารวมร้านสินค้าชุมชนพร้อมจำนวนสินค้าของแต่ละร้าน</li>
+          <li>แตะร้านที่สนใจเพื่อดูสินค้า</li>
+          <li>ปุ่ม <b>ตะกร้า</b> มุมขวาบน เปิดดูตะกร้าได้ทุกเมื่อ</li>
+        </ul>
+      </div>
+    </div>
+    <div class="step">
+      <div class="phone"><img src="images/06-customer-store-products.jpg" alt=""></div>
+      <div>
+        <span class="step-no">6</span>
+        <h3>เพิ่มสินค้าลงตะกร้า</h3>
+        <ul>
+          <li>ดูรูป รายละเอียด และราคา</li>
+          <li>ใส่ <b>จำนวน</b> แล้วกด <b>เพิ่มลงตะกร้า</b></li>
+          <li>เพิ่มได้หลายชิ้นจากร้านเดียวกัน</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="folio"><span>ผึ้งพาเดิน · ลูกค้า</span><span>5</span></div>
+</section>
+
+<!-- Customer 4 -->
+<section class="page">
+  <div class="section-head"><span class="section-num">ลูกค้า</span><h2>ชำระเงินและติดตามคำสั่งซื้อ</h2></div>
+  <p class="section-lead">ยอดสินค้าและค่าส่งคำนวณโดยระบบทุกครั้ง ตรวจยอดก่อนกดสั่งซื้อ</p>
+  <div class="steps">
+    <div class="step">
+      <div class="phone"><img src="images/07-customer-cart.jpg" alt=""></div>
+      <div>
+        <span class="step-no">7</span>
+        <h3>ตะกร้าและวิธีรับสินค้า</h3>
+        <ul>
+          <li>ปรับจำนวนหรือลบสินค้าได้</li>
+          <li>เลือก <b>รับที่ร้าน</b> (ไม่มีค่าส่ง) หรือ <b>จัดส่ง</b> (ค่าส่งคงที่ ฿50) แล้วกรอกที่อยู่</li>
+          <li>กด <b>สั่งซื้อ</b> ระบบบันทึกตะกร้าและสร้างคำสั่งซื้อให้</li>
+        </ul>
+        <p class="tip">ข้อมูลที่กรอกค้างไว้ยังอยู่ แม้กดย้อนกลับหรือรีเฟรช จนกว่าจะปิดหน้าต่าง</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="phone"><img src="images/08-customer-order-payment.jpg" alt=""></div>
+      <div>
+        <span class="step-no">8</span>
+        <h3>ชำระเงินผ่าน QR</h3>
+        <ul>
+          <li>ตรวจรายการ วิธีรับ และยอดรวม</li>
+          <li>สแกน QR เพื่อชำระเงิน</li>
+          <li>ติ๊ก <b>ฉันตรวจสอบรายการและยอดชำระแล้ว</b> แล้วกด <b>ยืนยันการชำระเงิน</b></li>
+        </ul>
+        <p class="tip">กดยืนยันซ้ำไม่สร้างคำสั่งซื้อซ้ำ</p>
+      </div>
+    </div>
+  </div>
+  <div class="folio"><span>ผึ้งพาเดิน · ลูกค้า</span><span>6</span></div>
+</section>
+
+<!-- Customer 5 -->
+<section class="page">
+  <div class="section-head"><span class="section-num">ลูกค้า</span><h2>My Order และการจองแพ็กเกจ</h2></div>
+  <p class="section-lead">ติดตามสถานะสินค้า และจัดทริปตามตัวเลือกที่ชุมชนเปิดให้บริการ</p>
+  <div class="steps">
+    <div class="step">
+      <div class="phone"><img src="images/09-customer-my-order.jpg" alt=""></div>
+      <div>
+        <span class="step-no">9</span>
+        <h3>ติดตามใน My Order</h3>
+        <ul>
+          <li>แท็บสถานะ: <b>ที่ต้องชำระ</b> · <b>ร้านกำลังเตรียม</b> · <b>กำลังจัดส่ง</b> · <b>สำเร็จ</b></li>
+          <li>เห็นเลขพัสดุเมื่อร้านกรอก</li>
+          <li>คำสั่งซื้อที่ยังไม่ชำระ กด <b>ไปชำระเงิน</b> ได้</li>
+        </ul>
+      </div>
+    </div>
+    <div class="step">
+      <div class="phone"><img src="images/10-customer-packages-list.jpg" alt=""></div>
+      <div>
+        <span class="step-no">10</span>
+        <h3>เลือกแพ็กเกจ</h3>
+        <ul>
+          <li>3 กลุ่ม: <b>Trail &amp; Running</b>, <b>Wild Fire Study</b>, <b>Cultural Study Trip</b></li>
+          <li>แต่ละกลุ่มมีแพ็กเกจย่อยพร้อมราคาต่อคน</li>
+          <li>ต้องการแบบอื่น กด <b>สอบถามแพ็กเกจเพิ่มเติม</b></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="folio"><span>ผึ้งพาเดิน · ลูกค้า</span><span>7</span></div>
+</section>
+
+<!-- Customer 6 -->
+<section class="page">
+  <div class="section-head"><span class="section-num">ลูกค้า</span><h2>จองแพ็กเกจ</h2></div>
+  <p class="section-lead">เลือกบริการในแต่ละช่องตามจำนวนที่กำหนด แล้วระบุวันและจำนวนคน</p>
+  <div class="steps">
+    <div class="step">
+      <div class="phone"><img src="images/11-customer-package-options.jpg" alt=""></div>
+      <div>
+        <span class="step-no">11</span>
+        <h3>จัดตัวเลือกในแพ็กเกจ</h3>
+        <ul>
+          <li>เลือกบริการในแต่ละช่องให้ครบตามจำนวน เช่น เส้นทาง 1 รายการ มื้อกลางวัน 1 รายการ</li>
+          <li>ระบุ <b>วันเริ่มทริป</b> และ <b>จำนวนผู้เข้าร่วม</b></li>
+          <li>กด <b>ตรวจราคาและไปหน้าชำระเงิน</b></li>
+        </ul>
+        <p class="tip">กด <b>บันทึกตัวเลือก</b> เพื่อเก็บไว้ก่อนได้ การบันทึกยังไม่ใช่การจอง</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="phone"><img src="images/12-customer-booking-payment.jpg" alt=""></div>
+      <div>
+        <span class="step-no">12</span>
+        <h3>ตรวจและชำระการจอง</h3>
+        <ul>
+          <li>ตรวจจำนวนคน ราคาต่อคน ยอดรวม และตัวเลือก</li>
+          <li>สแกน QR ติ๊กยืนยันการตรวจสอบ แล้วกด <b>ยืนยันการชำระเงิน</b></li>
+          <li>ชำระแล้ว เพิ่มสถานที่ทั้งหมดของแพ็กเกจเข้า My Trip ได้</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="folio"><span>ผึ้งพาเดิน · ลูกค้า</span><span>8</span></div>
+</section>
+
+<!-- Customer 7 + Staff 1 -->
+<section class="page">
+  <div class="section-head"><span class="section-num">ลูกค้า</span><h2>My Trip</h2></div>
+  <p class="section-lead">รวมทริปที่จองและสถานที่ที่คุณบันทึกเองไว้ในที่เดียว</p>
+  <div class="steps one" style="height:auto">
+    <div class="step">
+      <div class="phone"><img src="images/13-customer-my-trip.jpg" alt=""></div>
+      <div>
+        <span class="step-no">13</span>
+        <h3>ทริปและสถานที่ของคุณ</h3>
+        <ul>
+          <li><b>ทริปที่จองแล้ว</b>: วันที่ สถานะการชำระ และสถานที่ในแพ็กเกจ</li>
+          <li><b>สถานที่ที่บันทึกเอง</b>: แยกจากการจองชัดเจน ลบออกได้</li>
+          <li>กด <b>ดูรายละเอียดการจอง</b> เพื่อเปิดรายการเดิม</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="folio"><span>ผึ้งพาเดิน · ลูกค้า</span><span>9</span></div>
+</section>
+
+<!-- Staff 1 -->
+<section class="page">
+  <div class="section-head"><span class="section-num">ผู้ประกอบการ</span><h2>สมัครและรออนุมัติ</h2></div>
+  <p class="section-lead">สมัครครั้งเดียว ใช้งานได้หลังผู้ดูแลโครงการตรวจและอนุมัติ</p>
+  <div class="steps">
+    <div class="step">
+      <div class="phone"><img src="images/14-staff-register-form.jpg" alt=""></div>
+      <div>
+        <span class="step-no">1</span>
+        <h3>กรอกแบบสมัคร</h3>
+        <ul>
+          <li>ที่หน้าเข้าสู่ระบบ กด <b>สมัครผู้ประกอบการชุมชน</b></li>
+          <li>กรอกชื่อกิจการ ที่อยู่ พิกัด เบอร์โทร และประเภทกิจการ (เลือก “อื่น ๆ” แล้วระบุเองได้)</li>
+          <li>แนบรูปกิจการ 1–19 รูป (JPG, PNG, WebP ไม่เกิน 5 MB ต่อรูป)</li>
+          <li>ตั้งอีเมลและรหัสผ่าน กดรูปตาเพื่อดูรหัสที่พิมพ์</li>
+        </ul>
+        <p class="tip">ถ้าอีเมลนี้มีบัญชีในระบบอยู่แล้ว ให้ใช้รหัสผ่านเดิมของบัญชีนั้น</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="phone"><img src="images/15-staff-register-pending.jpg" alt=""></div>
+      <div>
+        <span class="step-no">2</span>
+        <h3>รอผู้ดูแลอนุมัติ</h3>
+        <ul>
+          <li>ส่งแล้วจะเห็นข้อความ <b>ส่งข้อมูลเรียบร้อยแล้ว</b></li>
+          <li>ระหว่างรอ ยังเข้าพื้นที่ผู้ประกอบการไม่ได้</li>
+          <li>เมื่ออนุมัติแล้ว เข้าสู่ระบบด้วยอีเมลและรหัสผ่านที่ตั้งไว้</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="folio"><span>ผึ้งพาเดิน · ผู้ประกอบการชุมชน</span><span>10</span></div>
+</section>
+
+<!-- Staff 2 -->
+<section class="page">
+  <div class="section-head"><span class="section-num">ผู้ประกอบการ</span><h2>ข้อมูลกิจการและสินค้า</h2></div>
+  <p class="section-lead">เลือก “ผู้ประกอบการชุมชน” ที่หน้าเข้าสู่ระบบ แล้วกรอกอีเมลและรหัสผ่าน</p>
+  <div class="steps">
+    <div class="step">
+      <div class="phone"><img src="images/16-staff-home.jpg" alt=""></div>
+      <div>
+        <span class="step-no">3</span>
+        <h3>ข้อมูลกิจการของฉัน</h3>
+        <ul>
+          <li>แก้ชื่อ รายละเอียด ที่อยู่ พิกัด เบอร์โทร และรูปกิจการ</li>
+          <li>ลูกค้าเห็นข้อมูลนี้ในหน้าบริการทันทีหลังบันทึก</li>
+          <li>ปุ่มด้านบน: <b>จัดการสินค้าของฉัน</b> และ <b>คำสั่งซื้อของร้าน</b></li>
+        </ul>
+      </div>
+    </div>
+    <div class="step">
+      <div class="phone"><img src="images/17-staff-product-editor.jpg" alt=""></div>
+      <div>
+        <span class="step-no">4</span>
+        <h3>ลงสินค้า</h3>
+        <ul>
+          <li>กรอกชื่อสินค้า รายละเอียด และราคา (บาท)</li>
+          <li>แนบรูปสินค้า 1 รูป แล้วกด <b>เพิ่มสินค้า</b></li>
+          <li>แก้ไขสินค้าเดิม หรือกด <b>นำออก</b> เพื่อเลิกขาย จากรายการด้านล่าง</li>
+        </ul>
+        <p class="tip">ส่วนสินค้าใช้ได้กับกิจการประเภท “สินค้าชุมชน”</p>
+      </div>
+    </div>
+  </div>
+  <div class="folio"><span>ผึ้งพาเดิน · ผู้ประกอบการชุมชน</span><span>11</span></div>
+</section>
+
+<!-- Staff 3 -->
+<section class="page">
+  <div class="section-head"><span class="section-num">ผู้ประกอบการ</span><h2>จัดการคำสั่งซื้อ</h2></div>
+  <p class="section-lead">เห็นเฉพาะคำสั่งซื้อของร้านตนเองที่ลูกค้าชำระเงินแล้ว</p>
+  <div class="steps one" style="height:auto">
+    <div class="step">
+      <div class="phone"><img src="images/18-staff-orders-status.jpg" alt=""></div>
+      <div>
+        <span class="step-no">5</span>
+        <h3>อัปเดตสถานะและเลขพัสดุ</h3>
+        <ul>
+          <li>แต่ละคำสั่งซื้อแสดงสินค้า จำนวน ยอด วิธีรับ และที่อยู่จัดส่ง</li>
+          <li>เลือกสถานะ: <b>กำลังเตรียมของ</b> → <b>กำลังไปส่งของ</b> → <b>ส่งของเรียบร้อยแล้ว</b></li>
+          <li>คำสั่งซื้อแบบจัดส่ง กรอก <b>เลขพัสดุ</b> ได้ (ไม่บังคับ) แบบรับที่ร้านไม่ต้องกรอก</li>
+          <li>กด <b>บันทึกสถานะ</b> ลูกค้าจะเห็นใน My Order</li>
+        </ul>
+        <p class="tip">สถานะเดินหน้าได้อย่างเดียว ย้อนกลับไม่ได้ ตรวจให้แน่ใจก่อนบันทึก</p>
+      </div>
+    </div>
+  </div>
+  <div class="folio"><span>ผึ้งพาเดิน · ผู้ประกอบการชุมชน</span><span>12</span></div>
+</section>
+
+<!-- Admin 1 -->
+<section class="page">
+  <div class="section-head"><span class="section-num">ผู้ดูแล</span><h2>อนุมัติและจัดแพ็กเกจ</h2></div>
+  <p class="section-lead">เลือก “ผู้ดูแลโครงการ” ระบบเชื่อม LINE ให้อัตโนมัติ จากนั้นกรอกอีเมลและรหัสผ่าน ต้องใช้ LINE บัญชีเดียวกับที่ผูกไว้ทุกครั้ง</p>
+  <div class="steps">
+    <div class="step">
+      <div class="phone"><img src="images/19-admin-home-approval.jpg" alt=""></div>
+      <div>
+        <span class="step-no">1</span>
+        <h3>ตรวจสอบผู้ประกอบการ</h3>
+        <ul>
+          <li>รายชื่อผู้สมัครพร้อมข้อมูลกิจการ อีเมล พิกัด และรูป</li>
+          <li>ตรวจแล้วกด <b>อนุมัติผู้ประกอบการ</b></li>
+          <li>เมนูบน: <b>จัดการแพ็กเกจ</b> · <b>ดูรายการจอง</b> · <b>จัดการผู้ดูแล</b></li>
+        </ul>
+      </div>
+    </div>
+    <div class="step">
+      <div class="phone"><img src="images/20-admin-packages-editor.jpg" alt=""></div>
+      <div>
+        <span class="step-no">2</span>
+        <h3>จัดการแพ็กเกจ</h3>
+        <ul>
+          <li>เลือกกลุ่มแพ็กเกจ แก้ชื่อ รายละเอียด และลิงก์สอบถาม</li>
+          <li>กด <b>เพิ่ม Sub Package</b> กำหนดราคาต่อคน ระยะเวลา และช่องตัวเลือก</li>
+          <li>แต่ละช่องเลือกประเภทบริการ จำนวนที่ลูกค้าต้องเลือก และบริการที่เปิดให้เลือก</li>
+        </ul>
+        <p class="tip">แก้แพ็กเกจแล้ว การจองเดิมของลูกค้ายังแสดงข้อมูลตามตอนที่จอง</p>
+      </div>
+    </div>
+  </div>
+  <div class="folio"><span>ผึ้งพาเดิน · ผู้ดูแลโครงการ</span><span>13</span></div>
+</section>
+
+<!-- Admin 2 -->
+<section class="page">
+  <div class="section-head"><span class="section-num">ผู้ดูแล</span><h2>รายการจองและเพิ่มผู้ดูแล</h2></div>
+  <p class="section-lead">ดูการจองทั้งหมดของโครงการ และเพิ่มคนช่วยดูแลระบบ</p>
+  <div class="steps">
+    <div class="step">
+      <div class="phone"><img src="images/21-admin-bookings.jpg" alt=""></div>
+      <div>
+        <span class="step-no">3</span>
+        <h3>รายการจองแพ็กเกจ</h3>
+        <ul>
+          <li>เห็นวันเดินทาง แพ็กเกจ จำนวนคน ยอด และสถานะการชำระ</li>
+          <li>กด <b>ดูรายละเอียดและตัวเลือกที่บันทึกไว้</b> เพื่อดูบริการที่ลูกค้าเลือก</li>
+        </ul>
+      </div>
+    </div>
+    <div class="step">
+      <div class="phone"><img src="images/22-admin-add-admin.jpg" alt=""></div>
+      <div>
+        <span class="step-no">4</span>
+        <h3>เพิ่มผู้ดูแล</h3>
+        <ul>
+          <li>กรอกอีเมลและรหัสผ่านเริ่มต้น (อย่างน้อย 12 ตัวอักษร) แล้วกด <b>เพิ่มผู้ดูแล</b></li>
+          <li>แจ้งรหัสผ่านให้ผู้รับทางช่องทางส่วนตัว</li>
+          <li>ผู้รับเข้าสู่ระบบแบบผู้ดูแล ยืนยันรับสิทธิ์ แล้วระบบผูก LINE ของผู้รับให้</li>
+        </ul>
+        <p class="tip">ถ้าอีเมลนี้มีบัญชีอยู่แล้ว ผู้รับใช้รหัสผ่านเดิม ระบบไม่เปลี่ยนรหัสให้</p>
+      </div>
+    </div>
+  </div>
+  <div class="folio"><span>ผึ้งพาเดิน · ผู้ดูแลโครงการ</span><span>14</span></div>
+</section>
+
+<!-- FAQ -->
+<section class="page">
+  <div class="section-head"><span class="section-num">ช่วยเหลือ</span><h2>คำถามที่พบบ่อย</h2></div>
+  <p class="section-lead">ปัญหาที่เจอบ่อยและวิธีแก้เบื้องต้น</p>
+  <div class="faq">
+    <div>
+      <h3>เปิดจาก LINE แล้วเข้าไม่ได้</h3>
+      <p>ลองปิดหน้าต่างแล้วเปิดใหม่จากเมนู LINE OA “ผึ้งพาเดิน” หากยังไม่ได้ ติดต่อผู้ดูแลโครงการ</p>
+    </div>
+    <div>
+      <h3>ผู้ประกอบการเข้าระบบไม่ได้</h3>
+      <p>ตรวจว่าเลือก “ผู้ประกอบการชุมชน” และบัญชีได้รับอนุมัติแล้ว ถ้ายังรออนุมัติ ระบบจะแจ้งสถานะให้ทราบ</p>
+    </div>
+    <div>
+      <h3>ผู้ดูแลเข้าระบบแล้วขึ้นว่า LINE ไม่ตรง</h3>
+      <p>ต้องใช้ LINE บัญชีเดียวกับที่ผูกไว้ตอนรับสิทธิ์ครั้งแรก ออกจาก LINE บัญชีอื่นแล้วลองใหม่</p>
+    </div>
+    <div>
+      <h3>ใส่สินค้าจากร้านอื่นไม่ได้</h3>
+      <p>หนึ่งตะกร้าซื้อได้จากร้านเดียว สั่งซื้อร้านเดิมให้เสร็จ หรือยืนยันล้างตะกร้าก่อนเลือกร้านใหม่</p>
+    </div>
+    <div>
+      <h3>กรอกข้อมูลค้างไว้แล้วหาย</h3>
+      <p>ระบบจำข้อมูลที่กรอกจนกว่าจะปิดหน้าต่าง LINE และไม่จำรหัสผ่านหรือรูปภาพ ส่งฟอร์มสำเร็จแล้วข้อมูลที่จำไว้จะถูกล้าง</p>
+    </div>
+    <div>
+      <h3>ข้อควรรู้สำหรับผู้ดูแลและร้านค้า</h3>
+      <p>ระบบรุ่นนี้ยังไม่เชื่อมการรับเงินกับธนาคาร การกดยืนยันการชำระในแอปไม่ใช่หลักฐานว่าได้รับเงิน ตรวจยอดเงินที่ได้รับจริงก่อนส่งของหรือให้บริการ</p>
+    </div>
+  </div>
+  <div class="folio"><span>ผึ้งพาเดิน · คู่มือการใช้งาน</span><span>15</span></div>
+</section>
+
+</body>
+</html>

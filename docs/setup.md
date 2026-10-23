@@ -144,3 +144,7 @@ const { services, hasMore } = await response.json();
 ```
 
 Released in `c4063d6`: only GET/OPTIONS on `/api/services` and `/api/packages` allow `Access-Control-Allow-Origin: *`, including error responses. Do not send `credentials: 'include'`; private/write endpoints retain their existing restrictions. Production verification returned GET 200 and OPTIONS 204 for these APIs, invalid category 400 with CORS, and private My Trip 403 without CORS. No storypage source or private API authorization was changed.
+
+## User manual
+
+`GET /manual` downloads `public/downloads/tonphueng-connect-manual.pdf`. The source is [`docs/manual/manual.html`](manual/manual.html) with screenshots in `docs/manual/images/`. To update it, edit the HTML, open it in Chrome/Chromium and print to PDF (A4, background graphics on, margins none), then replace the file in `public/downloads/` with the same name.

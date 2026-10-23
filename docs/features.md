@@ -23,7 +23,7 @@ Next.js และ TypeScript แอปเดียว ใช้ Supabase Auth, P
 | Staff | อีเมล/รหัสผ่านผ่าน Supabase Auth; สถานะ `pending` หรือ `disabled` ไม่ได้รับสิทธิ์ Staff |
 | Admin | อีเมล/รหัสผ่านร่วมกับ LINE ที่ตรวจแล้ว; Admin เริ่มต้นผูก LINE ครั้งแรกได้ครั้งเดียว และครั้งต่อไปต้องตรงบัญชี |
 | Session/logout | cookie แบบ HttpOnly; ฐานข้อมูลเก็บ hash ของ token อายุ 14 วัน; logout เพิกถอน session |
-| หน้าลูกค้า | `/services` ค้นหาและบันทึกสถานที่ได้; `/my-trip` แสดงรายการที่บันทึกเอง; `/my-order` ยังเป็นสถานะว่าง |
+| หน้าลูกค้า | `/services` ค้นหาและบันทึกสถานที่ได้; `/my-trip` แสดงรายการที่บันทึกเอง; `/my-order` แสดงคำสั่งซื้อของบัญชีตาม Ticket 07 |
 
 จุดเข้า: `/login`, `POST /api/auth/line`, `POST /api/auth/password`, `POST /api/auth/logout` และพื้นที่ `/staff`, `/admin`
 
@@ -84,21 +84,33 @@ Customer เลือกวันเริ่มและผู้เข้า�
 
 ## 06 — สินค้าและตะกร้า
 
-Staff จัดการสินค้าในร้านสินค้าชุมชนของตนได้ด้วยชื่อ รายละเอียด ราคา integer satang และรูปส่วนตัวหนึ่งรูป โดย reuse upload capability/session, private staging/canonical buckets และการตรวจ/แปลงรูปเดิม Customer เลือกเฉพาะร้านชุมชน ดูสินค้า เพิ่มจำนวน และเก็บตะกร้าส่วนตัวร้านเดียวได้; การเปลี่ยนร้านต้องยืนยันล้างตะกร้าเดิมอย่างชัดเจน รับที่ร้านคิดค่าส่ง 0; ส่งเดโมคิดคงที่ 5,000 satang พร้อมที่อยู่ที่จำเป็น Server คำนวณยอดจากสินค้า active ปัจจุบัน และซ่อนยอดของตะกร้าที่สินค้า/ร้านใช้ไม่ได้ Order และชำระเงินยังเป็น Ticket 07
+Staff จัดการสินค้าในร้านสินค้าชุมชนของตนได้ด้วยชื่อ รายละเอียด ราคา integer satang และรูปส่วนตัวหนึ่งรูป โดย reuse upload capability/session, private staging/canonical buckets และการตรวจ/แปลงรูปเดิม Customer เลือกเฉพาะร้านชุมชน ดูสินค้า เพิ่มจำนวน และเก็บตะกร้าส่วนตัวร้านเดียวได้; การเปลี่ยนร้านต้องยืนยันล้างตะกร้าเดิมอย่างชัดเจน รับที่ร้านคิดค่าส่ง 0; ส่งเดโมคิดคงที่ 5,000 satang พร้อมที่อยู่ที่จำเป็น Server คำนวณยอดจากสินค้า active ปัจจุบัน และซ่อนยอดของตะกร้าที่สินค้า/ร้านใช้ไม่ได้ Order และชำระเงินอยู่ใน Ticket 07
 
 จุดเข้า: `/staff/products`, `/products`, `/products/[serviceId]`, `/cart`, `/api/staff/products`, `/api/products`, `/api/cart`; โค้ดหลักอยู่ใน [`products.ts`](../src/lib/products.ts), [`cart.ts`](../src/lib/cart.ts) และ migration [007](../supabase/migrations/202610230007_products_cart.sql)
 
 สถานะ: migration 007 ใช้กับ Supabase จริงแล้วเมื่อ 2026-10-23; RLS/grants และ SQL probes ผ่านโดย rollback ข้อมูลทดสอบทั้งหมด PostgREST เห็นตาราง/RPC แล้ว ยังรอ full hosted Customer/LINE workflow, Product photo upload และ concurrency acceptance ผล local 47 unit/14 browser พร้อมหลักฐานฐานจริงอยู่ใน [Ticket 06 report](../agent-runs/06-product-cart/test-report.md)
 
+## 07 — คำสั่งซื้อสินค้า จ่ายจำลอง และติดตาม
+
+Customer กด "สั่งซื้อ" ครั้งเดียวจากตะกร้า: ระบบบันทึกตะกร้า (server คำนวณยอดใหม่) แล้วสร้าง Order ทันที ที่อยู่จัดส่งที่สั้นเกินจะแสดงข้อความใต้ช่องแทนการปิดปุ่มเงียบ ๆ PostgreSQL สร้าง Order จากตะกร้าร้านเดียวของบัญชีนั้นใน transaction เดียว: ตรวจร้าน/สินค้า active, คำนวณราคาสินค้า ค่าส่ง (รับที่ร้าน 0, จัดส่งเดโม 5,000 satang) และยอดรวมเป็น integer satang, เก็บ snapshot ชื่อ/ราคาต่อหน่วย/จำนวน แล้วล้างตะกร้า browser ส่งเพียง request UUID และร้านที่ตรวจไว้; ส่งซ้ำได้ Order เดิม หน้า Order แสดง QR จำลองที่รับเงินจริงไม่ได้และไม่ตรวจยอดธนาคาร การยืนยันจ่ายจำลองเป็น idempotent (`payment_method = simulated_demo`)
+
+Staff เห็นเฉพาะ Order ที่จ่ายจำลองแล้วของร้านตน พร้อมสินค้า จำนวน วิธีรับ ที่อยู่ และยอด แล้วตั้งสถานะ กำลังเตรียมของ / กำลังไปส่งของ / ส่งของเรียบร้อยแล้ว (ย้อนสถานะไม่ได้) เลขพัสดุไม่บังคับสำหรับจัดส่ง และไม่รับสำหรับรับที่ร้าน Customer ติดตามใน My Order แบบแท็บ ทั้งหมด / ที่ต้องชำระ / ร้านกำลังเตรียม / กำลังจัดส่ง / สำเร็จ พร้อม badge สถานะ "ชำระเงินแล้ว (จำลอง)" เลขพัสดุ และปุ่ม "ไปชำระเงิน" สำหรับรายการค้างจ่าย หน้า Order มีขั้นตอน รอชำระ → ชำระแล้ว (จำลอง) → ร้านกำลังเตรียม → กำลังจัดส่ง → ส่งเรียบร้อย (รับที่ร้านแสดงเป็น พร้อมรับที่ร้าน / รับสินค้าเรียบร้อย โดยไม่เปลี่ยนค่าที่บันทึก) บัญชีหรือร้านอื่นอ่าน/แก้ไม่ได้ (API 404/403; หน้า Order ของคนอื่นแสดง not-found แบบ soft 404 เพราะหน้า stream ผ่าน `loading.tsx`)
+
+ความลื่นไหล: หน้าหลักของลูกค้า Staff และ Admin มี `loading.tsx` skeleton ระหว่างโหลดข้อมูล ปุ่มสั่งซื้อ/ยืนยันจ่ายแสดงสถานะ "กำลัง…" ทันทีและใช้ `useTransition` ระหว่างเปลี่ยนหน้า และ [`vercel.json`](../vercel.json) กำหนด Vercel Functions ที่ `sin1` ให้ใกล้ Supabase สิงคโปร์ (มีผลเมื่อ deploy ครั้งถัดไป)
+
+จุดเข้า: `/cart`, `/orders/[orderId]`, `/my-order`, `/staff/orders`, `GET/POST /api/orders`, `POST /api/orders/[orderId]/confirm`, `PATCH /api/staff/orders/[orderId]`; โค้ดหลัก [`orders.ts`](../src/lib/orders.ts) และ migration [008](../supabase/migrations/202610230008_product_orders.sql)
+
+สถานะ: local checks ผ่าน; migration 008 **ยังไม่ apply** กับ Supabase จริง จึงยังใช้บน production ไม่ได้จนกว่าจะได้รับอนุญาตและ apply ไม่มีระบบยกเลิก/คืนเงินหรือสต๊อกตามขอบเขต spec ดู [Ticket 07](../.scratch/tonphueng-connect/issues/07-product-orders.md) และ [ผลทดสอบ](../agent-runs/07-product-orders/test-report.md)
+
 ## UI และสถานะงาน
 
 UI refinement และ CORS สำหรับ storypage ถูก release พร้อม `c4063d6`; Vercel deployment ผ่านและ endpoint production ที่เกี่ยวข้องตรวจตรงแล้ว (รายละเอียด Ticket 03). หน้าสินค้า/ตะกร้าของ Ticket 06 ใช้ migration 007 ที่ apply แล้ว; ยังรอ hosted workflow acceptance.
 
-Tickets 01–06 มี implementation แล้ว (ดูสถานะแยกใน ticket เดิม); Ticket 06 migrate แล้ว และ live checks ที่ยังค้างแยกไว้ในรายงาน ส่วน Ticket 03 UI/CORS release `c4063d6` ผ่าน production verification.
+Tickets 01–07 มี implementation แล้ว (ดูสถานะแยกใน ticket เดิม); Ticket 07 ยังรอ apply migration 008; Ticket 06 migrate แล้ว และ live checks ที่ยังค้างแยกไว้ในรายงาน ส่วน Ticket 03 UI/CORS release `c4063d6` ผ่าน production verification.
 
 ## งานที่ยังไม่พัฒนา
 
-งานหลักที่เหลือคือ Tickets 07–08: Order และเชิญ Admin ส่วน Ticket 09 (AI chat) และ 10 (Feedback) เป็น optional ทำเมื่อมีเวลา Tickets 04–05 ใช้ migrations 005–006 กับ Supabase จริงแล้วและรอ hosted workflow acceptance; Ticket 06 ใช้ migration 007 แล้วและรอ hosted workflow acceptance รายละเอียดอยู่ใน [tickets เดิม](../.scratch/tonphueng-connect/issues/)
+งานหลักที่เหลือคือ Ticket 08: เชิญ Admin และการ apply migration 008 ของ Ticket 07 (Order) กับ Supabase จริงพร้อมตรวจรับ ส่วน Ticket 09 (AI chat) และ 10 (Feedback) เป็น optional ทำเมื่อมีเวลา Tickets 04–05 ใช้ migrations 005–006 กับ Supabase จริงแล้วและรอ hosted workflow acceptance; Ticket 06 ใช้ migration 007 แล้วและรอ hosted workflow acceptance รายละเอียดอยู่ใน [tickets เดิม](../.scratch/tonphueng-connect/issues/)
 
 
 ข้อมูลธุรกิจที่ยังขาดใช้ข้อมูลเดโมที่ระบุชัดเจนได้ ระบบบันทึกและตรวจสิทธิ์ยังทำงานจริง การตั้งค่า/การอนุญาตบริการภายนอกยังค้างตาม [ตารางของ spec](../.scratch/tonphueng-connect/spec.md#ข้อมูลและการตั้งค่าที่ยังรอ)

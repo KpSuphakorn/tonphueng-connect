@@ -332,12 +332,16 @@ async function deleteStores(client: SupabaseClient, targets: StoreTarget[], coun
     }
     const carts = must(await client.from("customer_carts").delete().in("service_id", serviceIds).select("customer_account_id"), "Delete carts") as unknown[];
     bump(counts, "carts deleted", carts.length);
-    const { data: orders, error: orderError } = await client.from("product_orders").delete().in("service_id", serviceIds).select("id");
-    if (orderError?.code === "42501") {
-      throw new Error("The service role may not delete product_orders in this project. In the Supabase SQL Editor run:\n" +
-        `  delete from public.product_orders where service_id in (${serviceIds.map((id) => `'${id}'`).join(", ")});\nthen rerun this command.`);
-    }
-    bump(counts, "orders deleted (items cascade)", (must({ data: orders, error: orderError }, "Delete orders") as unknown[]).length);
+    // service_role may lack DELETE on product_orders, so only attempt it when orders actually exist.
+    const existingOrders = must(await client.from("product_orders").select("id").in("service_id", serviceIds), "Read store orders") as unknown[];
+    if (existingOrders.length) {
+      const { data: orders, error: orderError } = await client.from("product_orders").delete().in("service_id", serviceIds).select("id");
+      if (orderError?.code === "42501") {
+        throw new Error("The service role may not delete product_orders in this project. In the Supabase SQL Editor run:\n" +
+          `  delete from public.product_orders where service_id in (${serviceIds.map((id) => `'${id}'`).join(", ")});\nthen rerun this command.`);
+      }
+      bump(counts, "orders deleted (items cascade)", (must({ data: orders, error: orderError }, "Delete orders") as unknown[]).length);
+    } else bump(counts, "orders deleted (items cascade)", 0);
     bump(counts, "products deleted (cascade)", productIds.length);
   }
   for (const target of targets) {

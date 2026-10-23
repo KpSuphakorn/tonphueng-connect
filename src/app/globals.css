@@ -112,6 +112,12 @@ h4 { margin-bottom: 4px; font-size: 1rem; font-weight: 600; }
 .action-bar { position: sticky; z-index: 4; bottom: calc(var(--nav-h) + var(--safe-bottom) + 12px); margin-top: 18px; }
 .action-bar .button { width: 100%; box-shadow: var(--shadow-lift); }
 .no-nav .action-bar { bottom: calc(var(--safe-bottom) + 12px); }
+/* Page-level floating action above the bottom nav (package booking); the page reserves room so it never covers the last fields. */
+.floating-action { position: fixed; z-index: 9; right: 0; bottom: calc(var(--nav-h) + var(--safe-bottom) + 12px); left: 0; display: flex; justify-content: center; padding: 0 max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left)); pointer-events: none; }
+.floating-action .button { width: min(100%, 560px); box-shadow: var(--shadow-lift); pointer-events: auto; }
+.page-wrap:has(.floating-action) { padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 120px); }
+/* Looks unavailable until date and participants are valid, but stays tappable to move focus to the missing field. */
+.floating-action .button-primary[data-ready="false"] { background: color-mix(in srgb, var(--forest) 55%, var(--paper)); }
 
 /* Panels, chips and badges */
 .panel, .note-card, .booking-summary, .booking-payment, .package-category-card, .package-options, .package-edit-panel, .staff-profile-card, .applicant-card, .switch-confirmation, .protected-card, .login-card {

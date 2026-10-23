@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { PackageCategory, PackageService, PackageSlot } from "../../lib/packages";
 import { clearDraft, readDraft, writeDraft } from "../components/session-draft";
 
-type BookingDraft = { choices: Record<string, string[]>; startDate: string; participants: number };
+type BookingDraft = { choices: Record<string, string[]>; startDate: string; participants: string };
 
 export type PackageView = {
   category: PackageCategory;
@@ -31,7 +31,13 @@ export function PackageOptions({ packageView, canSelect, savedSelection }: { pac
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [startDate, setStartDate] = useState("");
-  const [participants, setParticipants] = useState(1);
+  // Raw text so the field can be cleared on a phone; it is parsed and range-checked before booking.
+  const [participants, setParticipants] = useState("1");
+  const [bookingAttempted, setBookingAttempted] = useState(false);
+  const dateInput = useRef<HTMLInputElement>(null);
+  const participantsInput = useRef<HTMLInputElement>(null);
+  const participantCount = /^\d{1,3}$/.test(participants) ? Number(participants) : Number.NaN;
+  const participantsValid = Number.isInteger(participantCount) && participantCount >= 1 && participantCount <= 100;
   const [lastSubmission, setLastSubmission] = useState<{ fingerprint: string; requestId: string } | null>(null);
   // Session draft of unsaved choices, date and participants. Its base is the catalogue revision plus the saved
   // selection, so a draft made before the package or the saved choices changed is dropped (server wins).
@@ -43,7 +49,7 @@ export function PackageOptions({ packageView, canSelect, savedSelection }: { pac
     if (draft) {
       setChoices(validChoices(Object.entries(draft.choices ?? {}).map(([slot_id, service_ids]) => ({ slot_id, service_ids }))));
       if (typeof draft.startDate === "string") setStartDate(draft.startDate);
-      if (Number.isInteger(draft.participants)) setParticipants(draft.participants);
+      if (typeof draft.participants === "string" || typeof draft.participants === "number") setParticipants(String(draft.participants));
     }
     setDraftReady(true);
     // Restore once on mount for this package.
@@ -51,7 +57,7 @@ export function PackageOptions({ packageView, canSelect, savedSelection }: { pac
   }, []);
   useEffect(() => {
     if (!draftReady || !canSelect) return;
-    const untouched = JSON.stringify(choices) === JSON.stringify(validChoices(savedSelection?.choices ?? [])) && !startDate && participants === 1;
+    const untouched = JSON.stringify(choices) === JSON.stringify(validChoices(savedSelection?.choices ?? [])) && !startDate && participants === "1";
     if (untouched) clearDraft(draftKey); else writeDraft(draftKey, { choices, startDate, participants } satisfies BookingDraft, draftBase);
     // validChoices depends only on packageView, already covered by draftBase/draftKey.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -74,7 +80,7 @@ export function PackageOptions({ packageView, canSelect, savedSelection }: { pac
   }
   async function createBooking() {
     const payload = { category: packageView.category, sub_package_id: packageView.id, revision: packageView.revision,
-      choices: packageView.slots.map((slot) => ({ slot_id: slot.id, service_ids: choices[slot.id] ?? [] })), start_date: startDate, participants };
+      choices: packageView.slots.map((slot) => ({ slot_id: slot.id, service_ids: choices[slot.id] ?? [] })), start_date: startDate, participants: participantCount };
     const fingerprint = JSON.stringify(payload);
     const requestId = lastSubmission?.fingerprint === fingerprint ? lastSubmission.requestId : crypto.randomUUID();
     setLastSubmission({ fingerprint, requestId });
@@ -94,12 +100,30 @@ export function PackageOptions({ packageView, canSelect, savedSelection }: { pac
     const slot = packageView.slots.find((item) => item.id === choice.slot_id);
     return !slot || choice.service_ids.length !== slot.required_count || choice.service_ids.some((id) => !slot.options.some((option) => option.id === id));
   })));
+  const remainingChoices = packageView.slots.reduce((total, slot) => total + Math.max(0, slot.required_count - (choices[slot.id] ?? []).length), 0);
+  /** The floating bar stays reachable; while date or participants are missing it moves focus there instead of booking. */
+  function bookOrFocusMissing() {
+    const missing = !startDate ? dateInput.current : !participantsValid ? participantsInput.current : null;
+    if (missing) {
+      setBookingAttempted(true);
+      missing.scrollIntoView({ block: "center" });
+      missing.focus({ preventScroll: true });
+      return;
+    }
+    void createBooking();
+  }
+  function showFirstIncompleteSlot() {
+    const slot = packageView.slots.find((item) => (choices[item.id] ?? []).length < item.required_count);
+    const element = slot ? document.getElementById(`slot-${slot.id}`) : null;
+    element?.scrollIntoView({ block: "start" });
+    element?.querySelector<HTMLInputElement>("input:not(:disabled)")?.focus({ preventScroll: true });
+  }
   return (
     <section className="package-options" aria-labelledby="package-options-title">
       <div className="section-heading"><h2 id="package-options-title">จัดตัวเลือกในแพ็กเกจ</h2><p>ตัวเลือกตามจำนวนที่กำหนด</p></div>
       {packageView.slots.map((slot) => {
         const selected = choices[slot.id] ?? [];
-        return <fieldset className="package-slot" key={slot.id}>
+        return <fieldset className="package-slot" key={slot.id} id={`slot-${slot.id}`}>
           <legend>{slot.name} <span>เลือก {slot.required_count} รายการ</span></legend>
           {!slot.options.length ? <p className="form-help">ขณะนี้ไม่มีบริการที่เปิดใช้งานตรงประเภทนี้</p> : <div className="package-choice-list">
             {slot.options.map((option) => {
@@ -119,10 +143,14 @@ export function PackageOptions({ packageView, canSelect, savedSelection }: { pac
       {savedNeedsReview && <p className="form-help" role="status">ตัวเลือกหรือแพ็กเกจเดิมเปลี่ยนไปแล้ว กรุณาตรวจสอบและบันทึกตัวเลือกปัจจุบันอีกครั้ง</p>}
       {canSelect ? <button className="button button-secondary" type="button" disabled={busy || !complete || packageView.revision < 1} onClick={() => void save()}>{busy ? "กำลังบันทึก…" : savedSelection ? "บันทึกการแก้ไขตัวเลือก" : "บันทึกตัวเลือก"}</button> : <Link className="button button-primary" href="/login">เข้าสู่ระบบเพื่อเลือก</Link>}
       {canSelect && complete && packageView.revision > 0 && <div className="booking-fields">
-        <label className="field"><span>วันเริ่มทริป <span className="required-marker" aria-hidden="true">*</span></span><input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} required disabled={busy} min={new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date())} /></label>
-        <label className="field"><span>จำนวนผู้เข้าร่วม <span className="required-marker" aria-hidden="true">*</span></span><input type="number" min="1" max="100" step="1" value={participants} onChange={(event) => setParticipants(Number(event.target.value))} required disabled={busy} /></label>
-        <p className="form-help">ระบุ 1–100 คน และเลือกวันที่ในอนาคต</p>
-        <div className="action-bar"><button className="button button-primary" type="button" disabled={busy || !startDate || participants < 1 || participants > 100} onClick={() => void createBooking()}>{busy ? "กำลังตรวจสอบราคา…" : "ตรวจราคาและไปหน้าชำระเงิน"}</button></div>
+        <label className="field"><span>วันเริ่มทริป <span className="required-marker" aria-hidden="true">*</span></span><input ref={dateInput} type="date" value={startDate} aria-invalid={bookingAttempted && !startDate} onChange={(event) => setStartDate(event.target.value)} required disabled={busy} min={new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date())} /></label>
+        <label className="field"><span>จำนวนผู้เข้าร่วม <span className="required-marker" aria-hidden="true">*</span></span><input ref={participantsInput} type="text" inputMode="numeric" pattern="[0-9]*" maxLength={3} autoComplete="off" value={participants} aria-invalid={bookingAttempted && !participantsValid} onChange={(event) => setParticipants(event.target.value.replace(/[^0-9]/g, ""))} required disabled={busy} /></label>
+        <p id="booking-fields-help" className={bookingAttempted && (!startDate || !participantsValid) ? "error-message" : "form-help"} role={bookingAttempted ? "status" : undefined}>ระบุ 1–100 คน และเลือกวันที่ในอนาคต</p>
+      </div>}
+      {canSelect && packageView.revision > 0 && <div className="floating-action">
+        {complete
+          ? <button className="button button-primary" type="button" disabled={busy} data-ready={Boolean(startDate) && participantsValid} aria-describedby="booking-fields-help" onClick={bookOrFocusMissing}>{busy ? "กำลังตรวจสอบราคา…" : "ตรวจราคาและไปหน้าชำระเงิน"}</button>
+          : <button className="button button-secondary" type="button" onClick={showFirstIncompleteSlot}>เลือกให้ครบอีก {remainingChoices} รายการ</button>}
       </div>}
       {message && <p className={message.startsWith("บันทึกตัวเลือกแล้ว") ? "success-message" : "error-message"} role="status">{message}</p>}
     </section>

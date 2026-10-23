@@ -99,7 +99,17 @@ test("Customer reviews the server price, confirms the demo, and adds the booked 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`/packages/${subId}`);
   await page.getByRole("checkbox", { name: "เส้นทางตัวอย่าง" }).check();
+  // The floating action stays tappable: with the date missing it moves focus to the date instead of booking.
+  await page.getByRole("button", { name: "ตรวจราคาและไปหน้าชำระเงิน" }).click();
+  await expect(page.getByLabel("วันเริ่มทริป")).toBeFocused();
+  expect(bookings.size).toBe(0);
   await page.getByLabel("วันเริ่มทริป").fill("2099-01-15");
+  // Participants can be cleared on a phone and retyped; empty is invalid and focuses the field.
+  await page.getByLabel("จำนวนผู้เข้าร่วม").fill("");
+  await expect(page.getByLabel("จำนวนผู้เข้าร่วม")).toHaveValue("");
+  await page.getByRole("button", { name: "ตรวจราคาและไปหน้าชำระเงิน" }).click();
+  await expect(page.getByLabel("จำนวนผู้เข้าร่วม")).toBeFocused();
+  expect(bookings.size).toBe(0);
   await page.getByLabel("จำนวนผู้เข้าร่วม").fill("2");
   failNextCreateResponse = true;
   await page.getByRole("button", { name: "ตรวจราคาและไปหน้าชำระเงิน" }).click();

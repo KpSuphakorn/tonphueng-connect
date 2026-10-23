@@ -21,7 +21,8 @@ export function CartForm() {
   const [navigating, startNavigation] = useTransition();
   const [checkoutAttempted, setCheckoutAttempted] = useState(false);
   const [cart, setCart] = useState<CartState | null>(null);
-  const [items, setItems] = useState<Array<{ product_id: string; quantity: number; name?: string; price_satang?: number }>>([]);
+  // `raw` keeps the quantity text while typing so a phone user can clear the field; `quantity` is NaN until it parses.
+  const [items, setItems] = useState<Array<{ product_id: string; quantity: number; raw?: string; name?: string; price_satang?: number }>>([]);
   const [fulfillment, setFulfillment] = useState<"pickup" | "delivery">("pickup");
   const [address, setAddress] = useState("");
   const [loading, setLoading] = useState(true);
@@ -133,9 +134,10 @@ export function CartForm() {
     {!cart.available ? <><p className="error-message" role="alert">รายการในตะกร้าหมดหรือร้านไม่เปิดใช้งานแล้ว ยอดเดิมใช้ไม่ได้ กรุณาล้างตะกร้าก่อนเลือกสินค้าใหม่</p><button type="button" className="button button-secondary" onClick={() => setConfirmClear(true)}>ล้างตะกร้า</button></> : <>
       <ul className="cart-line-list">{items.map((item) => <li key={item.product_id}>
         <span className="cart-line-name"><strong>{item.name}</strong><small>{money(item.price_satang ?? 0)} ต่อชิ้น</small></span>
-        <label className="field">จำนวน<input aria-label={`จำนวน ${item.name}`} type="number" inputMode="numeric" min="1" max="99" value={item.quantity} onChange={(event) => setItems((current) => current.map((line) => line.product_id === item.product_id ? { ...line, quantity: Number(event.target.value) } : line))} /></label>
+        <label className="field">จำนวน<input aria-label={`จำนวน ${item.name}`} type="text" inputMode="numeric" pattern="[0-9]*" maxLength={2} autoComplete="off" value={item.raw ?? String(item.quantity)} aria-invalid={checkoutAttempted && !(Number.isInteger(item.quantity) && item.quantity >= 1 && item.quantity <= 99)} onChange={(event) => { const raw = event.target.value.replace(/[^0-9]/g, ""); setItems((current) => current.map((line) => line.product_id === item.product_id ? { ...line, raw, quantity: raw ? Number(raw) : Number.NaN } : line)); }} /></label>
         <button type="button" className="text-button" aria-label={`ลบ ${item.name} จากตะกร้า`} onClick={() => setItems((current) => current.filter((line) => line.product_id !== item.product_id))}>ลบ</button>
       </li>)}</ul>
+      {checkoutAttempted && quantitiesInvalid && <p className="error-message" role="alert">จำนวนสินค้าต้องอยู่ระหว่าง 1 ถึง 99 ชิ้น</p>}
       <fieldset className="cart-fulfillment"><legend>วิธีรับสินค้า</legend>
         <label className="package-choice"><input type="radio" name="fulfillment" value="pickup" checked={fulfillment === "pickup"} onChange={() => { setFulfillment("pickup"); setAddress(""); }} />รับที่ร้าน · ไม่มีค่าส่ง</label>
         <label className="package-choice"><input type="radio" name="fulfillment" value="delivery" checked={fulfillment === "delivery"} onChange={() => setFulfillment("delivery")} />จัดส่ง · ค่าส่ง ฿50.00</label>

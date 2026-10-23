@@ -77,8 +77,8 @@ export function StaffProfileForm({ profile }: { profile: StaffDetails }) {
         <label className="field">รายละเอียดกิจการ<textarea name="description" maxLength={4000} defaultValue={profile.description} /></label>
         <label className="field"><span>ที่อยู่ <span className="required-marker" aria-hidden="true">*</span></span><textarea name="address" required maxLength={1000} defaultValue={profile.address} /></label>
         <div className="coordinate-fields">
-          <label className="field"><span>ละติจูด <span className="required-marker" aria-hidden="true">*</span></span><input type="number" name="latitude" required min={-90} max={90} step="any" defaultValue={profile.latitude} /></label>
-          <label className="field"><span>ลองจิจูด <span className="required-marker" aria-hidden="true">*</span></span><input type="number" name="longitude" required min={-180} max={180} step="any" defaultValue={profile.longitude} /></label>
+          <label className="field"><span>ละติจูด <span className="required-marker" aria-hidden="true">*</span></span><input type="number" inputMode="decimal" name="latitude" required min={-90} max={90} step="any" defaultValue={profile.latitude} /></label>
+          <label className="field"><span>ลองจิจูด <span className="required-marker" aria-hidden="true">*</span></span><input type="number" inputMode="decimal" name="longitude" required min={-180} max={180} step="any" defaultValue={profile.longitude} /></label>
         </div>
         <label className="field"><span>เบอร์โทรศัพท์ <span className="required-marker" aria-hidden="true">*</span></span><input name="phone" type="tel" required maxLength={40} defaultValue={profile.phone} /></label>
         <label className="field"><span>ประเภทกิจการ <span className="required-marker" aria-hidden="true">*</span></span><select name="category" required value={category} onChange={(event) => setCategory(event.target.value as StaffDetails["category"])}>

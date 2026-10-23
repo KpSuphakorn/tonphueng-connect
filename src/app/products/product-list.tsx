@@ -16,7 +16,8 @@ export function ProductList({ serviceId, storeName, products }: { serviceId: str
 
   async function add(product: Product) {
     setBusy(true); setError(""); setNotice(""); setSwitchCart(null);
-    const quantity = Number(quantities[product.id] || "1");
+    const raw = quantities[product.id] ?? "1";
+    const quantity = raw ? Number(raw) : Number.NaN;
     if (!Number.isInteger(quantity) || quantity < 1 || quantity > 99) { setError("จำนวนสินค้าต้องอยู่ระหว่าง 1 ถึง 99 ชิ้น"); setBusy(false); return; }
     try {
       const currentResponse = await fetch("/api/cart", { cache: "no-store" });
@@ -64,7 +65,7 @@ export function ProductList({ serviceId, storeName, products }: { serviceId: str
     {products.length ? <ul className="public-product-list">{products.map((product) => <li className="public-product-row" key={product.id}>
       <img src={product.photo_url} alt={`รูป ${product.name}`} loading="lazy" />
       <div className="public-product-copy"><h2>{product.name}</h2>{product.description && <p>{product.description}</p>}<strong>{money(product.price_satang)}</strong></div>
-      <div className="product-add-row"><label className="field">จำนวน<input aria-label={`จำนวน ${product.name}`} inputMode="numeric" type="number" min="1" max="99" value={quantities[product.id] ?? "1"} onChange={(event) => setQuantities((current) => ({ ...current, [product.id]: event.target.value }))} /></label><button type="button" className="button button-primary" disabled={busy} onClick={() => void add(product)}>เพิ่มลงตะกร้า</button></div>
+      <div className="product-add-row"><label className="field">จำนวน<input aria-label={`จำนวน ${product.name}`} type="text" inputMode="numeric" pattern="[0-9]*" maxLength={2} autoComplete="off" value={quantities[product.id] ?? "1"} onChange={(event) => { const raw = event.target.value.replace(/[^0-9]/g, ""); setQuantities((current) => ({ ...current, [product.id]: raw })); }} /></label><button type="button" className="button button-primary" disabled={busy} onClick={() => void add(product)}>เพิ่มลงตะกร้า</button></div>
     </li>)}</ul> : <p className="note-card">ร้านนี้ยังไม่มีสินค้าให้เลือก</p>}
   </section>;
 }

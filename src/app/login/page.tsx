@@ -13,7 +13,6 @@ export default function LoginPage() {
         <LoginForm />
         <p className="register-prompt">ยังไม่ได้สมัครเป็นผู้ประกอบการ? <Link href="/staff/register">สมัครผู้ประกอบการชุมชน</Link></p>
       </section>
-      <Link href="/" className="back-link">กลับหน้าหลัก</Link>
     </main>
   );
 }

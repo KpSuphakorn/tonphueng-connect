@@ -95,6 +95,7 @@ test.beforeEach(async ({ page, context }) => {
 });
 
 test("Customer reviews the server price, confirms the demo, and adds the booked place to My Trip; Admin sees the booking", async ({ page, context }) => {
+  const screenshotDir = process.env.UI_SCREENSHOT_DIR;
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`/packages/${subId}`);
   await page.getByRole("checkbox", { name: "เส้นทางตัวอย่าง" }).check();
@@ -107,7 +108,13 @@ test("Customer reviews the server price, confirms the demo, and adds the booked 
   expect(bookings.size).toBe(1);
   await expect(page.locator(".booking-summary p").filter({ hasText: "ยอดรวมจากระบบ" })).toContainText("2,501.00");
   await expect(page.getByText(/ตรวจสอบยอดกับธนาคาร/)).toBeVisible();
-  await page.screenshot({ path: "/tmp/tonphueng-booking-payment.png", fullPage: true });
+  if (screenshotDir) {
+    await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
+    await page.screenshot({ path: `${screenshotDir}/tonphueng-booking-mobile.png`, fullPage: true });
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.screenshot({ path: `${screenshotDir}/tonphueng-booking-desktop.png`, fullPage: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+  }
   await page.goto("/my-trip");
   await expect(page.getByText(/รอยืนยันจ่ายจำลอง/)).toBeVisible();
   await page.getByRole("link", { name: "ดูรายละเอียดการจอง" }).click();
@@ -120,7 +127,12 @@ test("Customer reviews the server price, confirms the demo, and adds the booked 
   await page.goto("/my-trip");
   await expect(page.getByRole("heading", { name: "ทริปที่จองแล้ว" })).toBeVisible();
   await expect(page.getByText("เส้นทางตัวอย่าง")).toBeVisible();
-  await page.screenshot({ path: "/tmp/tonphueng-my-trip.png", fullPage: true });
+  if (screenshotDir) {
+    await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
+    await page.screenshot({ path: `${screenshotDir}/tonphueng-my-trip-mobile.png` });
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.screenshot({ path: `${screenshotDir}/tonphueng-my-trip-desktop.png` });
+  }
   await context.addCookies([{ name: "tonphueng_session", value: "admin-session", url: "http://127.0.0.1:4173", httpOnly: true, sameSite: "Lax" }]);
   await page.goto("/admin/bookings");
   await expect(page.getByRole("heading", { name: "รายการจองแพ็กเกจ" })).toBeVisible();

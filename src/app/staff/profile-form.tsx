@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { uploadStaffPhotosDirectly } from "./photo-upload";
 import type { StaffDetails } from "../../lib/staff";
@@ -16,11 +17,14 @@ export function StaffProfileForm({ profile }: { profile: StaffDetails }) {
   const [category, setCategory] = useState(profile.category);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [saved, setSaved] = useState(false);
+  const router = useRouter();
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
     setMessage("");
+    setSaved(false);
     try {
       const form = event.currentTarget;
       const fileInput = form.elements.namedItem("photos") as HTMLInputElement;
@@ -36,10 +40,14 @@ export function StaffProfileForm({ profile }: { profile: StaffDetails }) {
       });
       const result = (await response.json()) as { error?: string; message?: string };
       if (!response.ok) throw new Error(result.error || "บันทึกข้อมูลไม่สำเร็จ");
+      fileInput.value = "";
       setMessage(result.message || "บันทึกข้อมูลแล้ว");
-      window.location.reload();
+      setSaved(true);
+      setBusy(false);
+      router.refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "บันทึกข้อมูลไม่สำเร็จ กรุณาลองอีกครั้ง");
+      setSaved(false);
       setBusy(false);
     }
   }
@@ -47,27 +55,28 @@ export function StaffProfileForm({ profile }: { profile: StaffDetails }) {
   return (
     <section className="staff-profile-card" aria-labelledby="profile-heading">
       <h2 id="profile-heading">ข้อมูลกิจการ</h2>
+      <p className="form-help">* จำเป็นต้องกรอก</p>
       {profile.photos.length > 0 && <div className="business-photos" aria-label="รูปกิจการ">
         {profile.photos.map((photo, index) => <img key={photo} src={photo} alt={`รูปกิจการ ${index + 1}`} />)}
       </div>}
       <form className="form-stack" onSubmit={save}>
-        <label className="field">ชื่อกิจการ<input name="name" required maxLength={160} defaultValue={profile.name} /></label>
+        <label className="field"><span>ชื่อกิจการ <span className="required-marker" aria-hidden="true">*</span></span><input name="name" required maxLength={160} defaultValue={profile.name} /></label>
         <label className="field">รายละเอียดกิจการ<textarea name="description" maxLength={4000} defaultValue={profile.description} /></label>
-        <label className="field">ที่อยู่<textarea name="address" required maxLength={1000} defaultValue={profile.address} /></label>
+        <label className="field"><span>ที่อยู่ <span className="required-marker" aria-hidden="true">*</span></span><textarea name="address" required maxLength={1000} defaultValue={profile.address} /></label>
         <div className="coordinate-fields">
-          <label className="field">ละติจูด<input type="number" name="latitude" required min={-90} max={90} step="any" defaultValue={profile.latitude} /></label>
-          <label className="field">ลองจิจูด<input type="number" name="longitude" required min={-180} max={180} step="any" defaultValue={profile.longitude} /></label>
+          <label className="field"><span>ละติจูด <span className="required-marker" aria-hidden="true">*</span></span><input type="number" name="latitude" required min={-90} max={90} step="any" defaultValue={profile.latitude} /></label>
+          <label className="field"><span>ลองจิจูด <span className="required-marker" aria-hidden="true">*</span></span><input type="number" name="longitude" required min={-180} max={180} step="any" defaultValue={profile.longitude} /></label>
         </div>
-        <label className="field">เบอร์โทรศัพท์<input name="phone" type="tel" required maxLength={40} defaultValue={profile.phone} /></label>
-        <label className="field">ประเภทกิจการ<select name="category" value={category} onChange={(event) => setCategory(event.target.value as StaffDetails["category"])}>
+        <label className="field"><span>เบอร์โทรศัพท์ <span className="required-marker" aria-hidden="true">*</span></span><input name="phone" type="tel" required maxLength={40} defaultValue={profile.phone} /></label>
+        <label className="field"><span>ประเภทกิจการ <span className="required-marker" aria-hidden="true">*</span></span><select name="category" required value={category} onChange={(event) => setCategory(event.target.value as StaffDetails["category"])}>
           {categories.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
         </select></label>
-        {category === "other" && <label className="field">ระบุประเภทอื่น<input name="other_category" required maxLength={120} defaultValue={profile.other_category ?? ""} /></label>}
+        {category === "other" && <label className="field"><span>ระบุประเภทอื่น <span className="required-marker" aria-hidden="true">*</span></span><input name="other_category" required maxLength={120} defaultValue={profile.other_category ?? ""} /></label>}
         <label className="field">เปลี่ยนรูปกิจการ (ไม่เกิน 19 รูป)<input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple /></label>
         <p className="form-help">หากไม่เลือกรูปใหม่ ระบบจะเก็บรูปเดิมไว้ รูปใหม่ต้องเป็น JPG, PNG หรือ WebP ขนาดไม่เกิน 5 MB ต่อไฟล์</p>
         <button className="button button-primary button-wide" type="submit" disabled={busy}>{busy ? "กำลังบันทึก…" : "บันทึกข้อมูลกิจการ"}</button>
       </form>
-      {message && <p className="error-message" role="status" aria-live="polite">{message}</p>}
+      {message && <p className={saved ? "success-message" : "error-message"} role="status" aria-live="polite">{message}</p>}
     </section>
   );
 }

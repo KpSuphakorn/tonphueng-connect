@@ -1,9 +1,14 @@
 import { listServices, PAGE_SIZE, parseCoordinate, parseServiceCategory } from "../../../lib/services";
 
 export const runtime = "nodejs";
+const corsHeaders = { "access-control-allow-origin": "*" };
 
 function response(status: number, body: unknown) {
-  return Response.json(body, { status, headers: { "cache-control": "no-store", "x-content-type-options": "nosniff" } });
+  return Response.json(body, { status, headers: { ...corsHeaders, "cache-control": "no-store", "x-content-type-options": "nosniff" } });
+}
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: { ...corsHeaders, "access-control-allow-methods": "GET, OPTIONS" } });
 }
 
 export async function GET(request: Request) {

@@ -12,14 +12,21 @@
 
 ## Acceptance criteria
 
-- [ ] Staff Register เก็บชื่อ ที่อยู่ข้อความ GPS เบอร์โทร ประเภทกิจการ รูปภาพ อีเมล และรหัสผ่านตามสเปก โดยไม่เก็บหรือเปิดเผยรหัสผ่านเป็นข้อความธรรมดา
-- [ ] มีหมวดสินค้าชุมชน ที่พัก ร้านอาหาร การท่องเที่ยว/เส้นทางเดินป่า และอื่น ๆ พร้อมข้อความระบุหมวดอื่น
-- [ ] รูปกิจการมีจำนวนน้อยกว่า 20 รูป ปฏิเสธตั้งแต่ 20 รูปขึ้นไปและตรวจไฟล์ที่รับเข้าบน server ด้วย
-- [ ] การสมัครสร้างบัญชี/ข้อมูลกิจการจริงในสถานะรออนุมัติ และไม่ยอมให้ผู้สมัครกำหนดสถานะอนุมัติหรือบทบาท Admin เอง
-- [ ] ผู้สมัครเห็นว่ารออนุมัติและยังใช้สิทธิ์ Staff ไม่ได้ แม้เรียกข้อมูลจัดการโดยตรง
-- [ ] Admin ที่ผ่านการตรวจครบเปิดข้อมูลผู้สมัครและอนุมัติได้ จากนั้น Staff เข้าจัดการกิจการของตนได้
-- [ ] Staff อ่านหรือแก้ข้อมูลกิจการของ Staff อื่นไม่ได้; การบันทึกและอนุมัติยังอยู่หลังโหลดหน้าใหม่
-- [ ] ผ่านการทดสอบสมัคร -> รอ -> อนุมัติ -> เข้าจัดการ รวมรูปเกินจำนวน ข้อมูลไม่ครบ และการข้ามการตรวจสิทธิ์
+- [x] Staff Register เก็บชื่อ ที่อยู่ข้อความ GPS เบอร์โทร ประเภทกิจการ รูปภาพ อีเมล และรหัสผ่านตามสเปก โดยไม่เก็บหรือเปิดเผยรหัสผ่านเป็นข้อความธรรมดา
+- [x] มีหมวดสินค้าชุมชน ที่พัก ร้านอาหาร การท่องเที่ยว/เส้นทางเดินป่า และอื่น ๆ พร้อมข้อความระบุหมวดอื่น
+- [x] รูปกิจการมีจำนวนน้อยกว่า 20 รูป ปฏิเสธตั้งแต่ 20 รูปขึ้นไปและตรวจไฟล์ที่รับเข้าบน server ด้วย
+- [x] การสมัครสร้างบัญชี/ข้อมูลกิจการจริงในสถานะรออนุมัติ และไม่ยอมให้ผู้สมัครกำหนดสถานะอนุมัติหรือบทบาท Admin เอง
+- [x] ผู้สมัครเห็นว่ารออนุมัติและยังใช้สิทธิ์ Staff ไม่ได้ แม้เรียกข้อมูลจัดการโดยตรง
+- [x] Admin ที่ผ่านการตรวจครบเปิดข้อมูลผู้สมัครและอนุมัติได้ จากนั้น Staff เข้าจัดการกิจการของตนได้
+- [x] Staff อ่านหรือแก้ข้อมูลกิจการของ Staff อื่นไม่ได้; การบันทึกและอนุมัติยังอยู่หลังโหลดหน้าใหม่
+- [x] ผ่านการทดสอบสมัคร -> รอ -> อนุมัติ -> เข้าจัดการ รวมรูปเกินจำนวน ข้อมูลไม่ครบ และการข้ามการตรวจสิทธิ์
+
+รายการที่เช็กด้านบนหมายถึงพัฒนาและผ่าน automated/local checks ตามรายงาน ไม่ใช่การรับรองว่า live flow ทุกกรณีผ่านแล้ว
+
+## Live acceptance ที่ทำแล้วและยังค้าง
+
+- [x] สมัคร Staff -> Admin อนุมัติ -> Staff เข้าใช้งานบนระบบจริง: เจ้าของรายงานว่าผ่านแล้ว
+- [ ] แก้โปรไฟล์/เปลี่ยนรูปบนมือถือจริง แล้วเปิดใหม่ตรวจข้อมูลและรูปที่อ่านกลับ
 
 ## External prerequisites and evidence
 
@@ -36,3 +43,5 @@
 - 2026-10-23: Vercel upload adaptation is implemented locally: browsers send binary images directly to private Supabase staging through server-issued path-scoped upload URLs, while Staff endpoints claim a one-use session, stream/decode images server-side, and retain canonical-photo ambiguity safeguards. Migration 004 remains local and unapplied; hosted CORS, Supabase Storage/Auth, Vercel, and LINE acceptance remain pending. See the appended validation evidence in [the existing report](../../../agent-runs/02-staff-approval/test-report.md).
 
 - 2026-10-23: Fresh Vercel upload review passed Standards/Spec with no blocking findings. Final source passed 33 Vitest tests, typecheck, and diff check; four browser tests and production build passed before the final narrow expiry-error correction (covered by the final unit suite). With explicit owner authorization, migration 004 was applied to the intended project and its private bucket, RLS/grants, owner/flow binding, one-use claim, expiry, and profile quota were verified through SQL; synthetic probe rows were rolled back. Original Ticket 02 is locally committed as `aec0c9c`; Ticket 03/upload adaptation remain uncommitted and all these changes remain unpushed. Real Storage/CORS/Auth/LINE and Vercel acceptance remain pending. See [validation evidence](../../../agent-runs/02-staff-approval/test-report.md).
+
+- 2026-10-23 (สถานะล่าสุด): โค้ด Tickets 01–05 อยู่บน production commit `4ad0423`; รายการ pending/uncommitted ในบันทึกก่อนหน้าเป็นประวัติ ไม่ใช่สถานะปัจจุบัน รอบปรับ UI/CORS และ numeric-input UX ยังเป็นงาน local รออนุญาต release

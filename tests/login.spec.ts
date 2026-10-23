@@ -55,7 +55,15 @@ async function stubLine(page: import("@playwright/test").Page, onAuthorize: "ret
 
 test("login lets a person choose the matching account type", async ({ page }) => {
   const lineRequests = await stubLine(page);
+  const screenshotDir = process.env.UI_SCREENSHOT_DIR;
   await page.goto("/login");
+  if (screenshotDir) {
+    await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({ path: `${screenshotDir}/tonphueng-login-mobile.png`, fullPage: true });
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.screenshot({ path: `${screenshotDir}/tonphueng-login-desktop.png`, fullPage: true });
+  }
 
   await expect(page.getByRole("heading", { name: "เข้าสู่ระบบ Tonphueng Connect" })).toBeVisible();
   await expect(page.getByRole("button", { name: "ลูกค้า" })).toBeVisible();
@@ -216,7 +224,15 @@ test("a stale LINE auth response cannot navigate after the Customer attempt was 
 });
 
 test("home offers open to an honest empty state", async ({ page }) => {
+  const screenshotDir = process.env.UI_SCREENSHOT_DIR;
   await page.goto("/");
+  if (screenshotDir) {
+    await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({ path: `${screenshotDir}/tonphueng-home-mobile.png` });
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.screenshot({ path: `${screenshotDir}/tonphueng-home-desktop.png` });
+  }
   const offer = page.locator("details.feature-card").first();
   await expect(offer).toBeVisible();
   await offer.locator("summary").click();

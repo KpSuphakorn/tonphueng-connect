@@ -39,7 +39,7 @@ Ticket 05 migration 006 (`202610230006_package_bookings.sql`) was applied with o
 
 ### Vercel and LIFF setup
 
-For a fresh project, obtain authorization to commit/push the reviewed local changes, then import `KpSuphakorn/tonphueng-connect` into Vercel with the Next.js preset, root directory `./`, and default install/build/output settings. Add the six server/runtime variables listed above; keep the service-role key server-only and set `APP_ORIGIN` to the production HTTPS origin without a path. Use the LIFF endpoint `https://<actual-project-domain>/login`, where this app initializes LIFF. The current project is already deployed at `https://tonphueng-connect.vercel.app` and its configured LIFF endpoint is `https://tonphueng-connect.vercel.app/login`. The owner reported that the app opened in external Chrome and returned to login with repeated role selection; this is not successful login acceptance. The local callback-continuation fix has not been deployed. The local `.env.local` still has a placeholder LIFF ID and was not changed. Verify in the deployed browser that Supabase Storage accepts signed `PUT` uploads with the `content-type` header from the app origin; local HTTP doubles do not establish live CORS behavior. The photo bytes go from the browser to Supabase Storage, so they do not pass through the Vercel function request body. Live registration/profile upload and LINE login/session acceptance still require owner-authorized testing. No deployment or plan upgrade is part of this local change.
+For a fresh project, obtain authorization to commit/push the reviewed local changes, then import `KpSuphakorn/tonphueng-connect` into Vercel with the Next.js preset, root directory `./`, and default install/build/output settings. Add the six server/runtime variables listed above; keep the service-role key server-only and set `APP_ORIGIN` to the production HTTPS origin without a path. Use the LIFF endpoint `https://<actual-project-domain>/login`, where this app initializes LIFF. The current project is already deployed at `https://tonphueng-connect.vercel.app` and its configured LIFF endpoint is `https://tonphueng-connect.vercel.app/login`. The callback-continuation fix is deployed. The owner reported successful Customer login from LINE, initial Admin binding, and approved Staff login; reopening, logout, and mismatched Admin LINE checks remain pending. The local `.env.local` still has a placeholder LIFF ID and was not changed. Verify in the deployed browser that Supabase Storage accepts signed `PUT` uploads with the `content-type` header from the app origin; local HTTP doubles do not establish live CORS behavior. The photo bytes go from the browser to Supabase Storage, so they do not pass through the Vercel function request body. Registration/approval/Staff login succeeded according to the owner. Profile replacement uploads and the remaining session checks still need live acceptance. This UI/CORS refinement remains local until separately authorized for release.
 
 If registration reports `cleanup_required` or `verify_required`, do not ask the applicant to retry immediately. A project Admin must use the logged reference, account ID, Auth user ID, owned photo object paths, and fixed cleanup failure labels to inspect the Auth identity, pending app account, and Service profile. A `verify_required` response means the Service write may have committed; if a complete Service profile exists, preserve the account and photos. Manual cleanup is only for a confirmed incomplete pending signup with no Service profile: remove only that signup's logged photo objects (or its verified object prefix), then delete its matching orphan Auth identity, which cascades its pending app account. For an uncertain profile edit, first verify which logged object paths the Service profile references; remove only confirmed unreferenced objects. Never delete an active account or a complete Service profile. If state is uncertain, preserve it and investigate before taking action. These steps are manual because Auth, Storage, and database cleanup cannot be guaranteed during an external service failure.
 
@@ -65,7 +65,7 @@ The command asks for a password with terminal input hidden. It creates the singl
 npm run dev
 ```
 
-Visit `http://localhost:3000`. The three account choices are separate: Customer uses LINE; Staff and Admin use email/password. A successful login creates an application session stored in Supabase. Signing out revokes the session. Staff can submit a business profile from `/staff/register`; it remains pending until an active Admin approves it. Approved Staff can read and edit only their own profile. Main, My Trip, and My Order show their Ticket 01 empty states until their later tickets add data and behavior.
+Visit `http://localhost:3000`. The three account choices are separate: Customer uses LINE; Staff and Admin use email/password. A successful login creates an application session stored in Supabase. Signing out revokes the session. Staff can submit a business profile from `/staff/register`; it remains pending until an active Admin approves it. Approved Staff can read and edit only their own profile. Services, saved places, Packages and Booking/My Trip behavior are implemented through Ticket 05; Product/My Order workflows remain pending Tickets 06–07.
 
 Local checks:
 
@@ -76,4 +76,27 @@ npm run test:e2e
 npm run build
 ```
 
-The automated auth tests stub the LINE and Supabase HTTP boundaries. The Playwright server receives explicit fake credentials and a loopback Supabase URL, so browser tests do not use `.env.local` or contact the real project. These tests do not validate the live LINE channel, LIFF configuration, or a real owner login. A live demo still needs manual login and persisted-session checks on a device after the current fix is deployed; for the intended in-client path, open the LIFF link from LINE OA/chat.
+The automated auth tests stub the LINE and Supabase HTTP boundaries. The Playwright server receives explicit fake credentials and a loopback Supabase URL, so browser tests do not use `.env.local` or contact the real project. These tests do not validate the live LINE channel, LIFF configuration, or a real owner login. A live demo still needs manual login and persisted-session checks on a device against the deployed app; for the intended in-client path, open the LIFF link from LINE OA/chat.
+
+## Public API for storypage
+
+Base URL: `https://tonphueng-connect.vercel.app`. No API key or application session is required for these public read endpoints.
+
+| Request | Response |
+| --- | --- |
+| `GET /api/services?category=tourism_trail&offset=0` | Tourism/trail Service profiles |
+| `GET /api/services?category=community_product&offset=0` | Community-product businesses, not individual Products |
+| `GET /api/services` | All active Staff Services |
+| `GET /api/packages` | `{ categories }` with the published Package catalogue |
+
+Service categories: `community_product`, `accommodation`, `restaurant`, `tourism_trail`, `other`. Omit `category` for all; invalid values return 400. Response: `{ services, hasMore, limit: 12 }`; increment `offset` by the returned count while `hasMore` is true. Optional `latitude` and `longitude` must be supplied together to sort by straight-line distance. Photo URLs are signed for one hour; fetch the list again when they expire.
+
+```js
+const response = await fetch(
+  'https://tonphueng-connect.vercel.app/api/services?category=tourism_trail&offset=0'
+);
+if (!response.ok) throw new Error(`Service List: ${response.status}`);
+const { services, hasMore } = await response.json();
+```
+
+Local CORS change: only GET/OPTIONS on `/api/services` and `/api/packages` allow `Access-Control-Allow-Origin: *`, including error responses. Do not send `credentials: 'include'`; private/write endpoints retain their existing restrictions. Production currently answers these GETs but requires release of this change before browser fetch from storypage works. No storypage source or private API authorization was changed. After an authorized push to `main`, wait for Vercel's automatic deployment to reach Ready, then verify the response header from storypage; a separate redeploy is unnecessary when the Git deployment succeeds.

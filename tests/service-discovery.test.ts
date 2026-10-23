@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createHash } from "node:crypto";
-import { GET as list } from "../src/app/api/services/route";
+import { GET as list, OPTIONS as servicesOptions } from "../src/app/api/services/route";
 import { DELETE, GET as myTrip, POST as save } from "../src/app/api/my-trip/route";
 import { getActiveService } from "../src/lib/services";
 
@@ -89,6 +89,7 @@ describe("service discovery and My Trip HTTP boundary", () => {
     expect(requests).toHaveLength(0);
     const all = await list(req("/api/services"));
     expect(all.status).toBe(200);
+    expect(all.headers.get("access-control-allow-origin")).toBe("*");
     expect((await all.json()).services).toHaveLength(2);
     const response = await list(req("/api/services?category=community_product"));
     const result = await response.json();
@@ -98,6 +99,27 @@ describe("service discovery and My Trip HTTP boundary", () => {
     expect(JSON.stringify(result)).not.toMatch(/account_id|auth_user_id|photo_paths|รออนุมัติ/);
     expect(await getActiveService(pendingService.id)).toBeNull();
     expect(requests.some(({ url }) => url.pathname === "/rest/v1/app_accounts" && url.searchParams.get("status") === "eq.active")).toBe(true);
+  });
+
+  it("allows cross-origin reads and preflight only on the public Service endpoint", async () => {
+    installBoundary();
+    const preflight = await servicesOptions();
+    expect(preflight.status).toBe(204);
+    expect(preflight.headers.get("access-control-allow-origin")).toBe("*");
+    expect(preflight.headers.get("access-control-allow-methods")).toContain("GET");
+    const invalid = await list(req("/api/services?category=all"));
+    expect(invalid.status).toBe(400);
+    expect(invalid.headers.get("access-control-allow-origin")).toBe("*");
+    const trip = await myTrip(req("/api/my-trip", "customer-a"));
+    expect(trip.headers.get("access-control-allow-origin")).toBeNull();
+  });
+
+  it("keeps public Service failures readable to cross-origin callers", async () => {
+    installBoundary();
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ message: "upstream unavailable" }, { status: 400 })));
+    const response = await list(req("/api/services"));
+    expect(response.status).toBe(503);
+    expect(response.headers.get("access-control-allow-origin")).toBe("*");
   });
 
   it("uses true coordinate ordering and rejects partial or invalid coordinates", async () => {

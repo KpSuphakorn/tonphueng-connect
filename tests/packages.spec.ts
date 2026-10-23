@@ -88,18 +88,55 @@ test.beforeEach(async ({ page, context }) => {
 });
 
 test("Admin saves a typed Package; Customer selects, reloads, and gets server validation and price", async ({ page, context }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const packageSaveBodies: Array<Record<string, unknown>> = [];
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname === "/api/admin/packages" && request.method() === "POST") packageSaveBodies.push(JSON.parse(request.postData() ?? "{}") as Record<string, unknown>);
+  });
   await page.goto("/admin/packages");
   await expect(page.getByRole("heading", { name: "จัดการ Package และ Sub Package" })).toBeVisible();
   await page.getByLabel("ชื่อ Package").fill("Trail & Running");
   await page.getByRole("button", { name: "เพิ่ม Sub Package" }).click();
   await page.getByLabel("ชื่อ Sub Package").fill("เดินป่าตัวอย่าง");
   await page.getByLabel("รายละเอียด", { exact: true }).fill("เส้นทางตัวอย่างจากบริการที่อนุมัติ");
-  await page.getByLabel("ราคาต่อคน (บาท)").fill("1250.50");
+  const price = page.getByLabel("ราคาต่อคน (บาท)");
+  const duration = page.getByLabel("ระยะเวลา (วัน)");
+  await price.pressSequentially("1250.50");
+  await expect(price).toHaveValue("1250.50");
   await page.getByRole("button", { name: "เพิ่ม slot" }).click();
   await page.getByLabel("ชื่อ slot").fill("เส้นทาง");
   await page.getByRole("checkbox", { name: "เส้นทางตัวอย่าง" }).check();
+  const screenshotDir = process.env.UI_SCREENSHOT_DIR;
+  if (screenshotDir) {
+    await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
+    await page.screenshot({ path: `${screenshotDir}/tonphueng-package-editor-mobile.png`, fullPage: true });
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.screenshot({ path: `${screenshotDir}/tonphueng-package-editor-desktop.png`, fullPage: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+  }
+
+  await price.fill("");
+  await duration.fill("");
+  const requiredCount = page.getByLabel("จำนวนที่ต้องเลือก");
+  await requiredCount.fill("");
+  await expect(price).toHaveValue("");
+  await expect(duration).toHaveValue("");
+  await expect(requiredCount).toHaveValue("");
+  await page.getByRole("button", { name: "บันทึกประเภทนี้" }).click();
+  expect(packageSaveBodies).toHaveLength(0);
+
+  await price.pressSequentially("1250.50");
+  await duration.fill("3");
+  await requiredCount.fill("1");
+  await expect(price).toHaveValue("1250.50");
+  await expect(duration).toHaveValue("3");
+  await expect(requiredCount).toHaveValue("1");
   await page.getByRole("button", { name: "บันทึกประเภทนี้" }).click();
   await expect(page.getByText("บันทึกแพ็กเกจแล้ว")).toBeVisible();
+  expect(packageSaveBodies).toHaveLength(1);
+  const savedCatalog = packageSaveBodies[0].catalog as { sub_packages: Array<{ price_per_person_satang: number; duration_days: number; slots: Array<{ required_count: number }> }> };
+  expect(savedCatalog.sub_packages[0]).toMatchObject({ price_per_person_satang: 125050, duration_days: 3 });
+  expect(savedCatalog.sub_packages[0].slots[0].required_count).toBe(1);
 
   await context.addCookies([{ name: "tonphueng_session", value: "customer-session", url: "http://127.0.0.1:4173", httpOnly: true, sameSite: "Lax" }]);
   await page.goto("/packages");

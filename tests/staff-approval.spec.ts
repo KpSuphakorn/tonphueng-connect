@@ -168,6 +168,8 @@ const fakeSupabase = createServer(async (request, response) => {
     const owner = url.searchParams.get("customer_account_id")?.slice(3) ?? "";
     return send(response, 200, [...(savedServices.get(owner) ?? [])].map((service_id) => ({ service_id, created_at: "2026-10-23T00:00:00.000Z" })));
   }
+  if (url.pathname === "/rest/v1/package_bookings" && request.method === "GET") return send(response, 200, []);
+  if (url.pathname === "/rest/v1/my_trip_booking_services" && request.method === "GET") return send(response, 200, []);
   if (url.pathname === "/rest/v1/my_trip_saved_services" && request.method === "POST") {
     const input = json();
     const rows = savedServices.get(input.customer_account_id as string) ?? new Set<string>();
@@ -232,14 +234,20 @@ test.afterAll(async () => {
 });
 
 test("Staff can register, wait for Admin approval, edit their own profile, and reload the saved result", async ({ page, context }) => {
-  const screenshotDir = process.env.STAFF_APPROVAL_SCREENSHOT_DIR;
+  const screenshotDir = process.env.UI_SCREENSHOT_DIR ?? process.env.STAFF_APPROVAL_SCREENSHOT_DIR;
   let registrationBodySize = 0;
   page.on("request", (request) => {
     if (new URL(request.url()).pathname === "/api/staff/register" && request.method() === "POST") registrationBodySize = request.postDataBuffer()?.byteLength ?? 0;
   });
   if (screenshotDir) await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/staff/register");
-  if (screenshotDir) await page.screenshot({ path: `${screenshotDir}/tonphueng-staff-register-mobile.png`, fullPage: true });
+  if (screenshotDir) {
+    await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
+    await page.screenshot({ path: `${screenshotDir}/tonphueng-staff-form-mobile.png`, fullPage: true });
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.screenshot({ path: `${screenshotDir}/tonphueng-staff-form-desktop.png`, fullPage: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+  }
   await page.getByLabel("ชื่อกิจการ").fill("กลุ่มผ้าทอชุมชน");
   await page.getByLabel("ที่อยู่").fill("บ้านต้นผึ้ง จังหวัดเชียงใหม่");
   await page.getByLabel("ละติจูด").fill("18.8");
@@ -276,6 +284,14 @@ test("Staff can register, wait for Admin approval, edit their own profile, and r
   await expect(page).toHaveURL(/\/staff$/);
   await expect(page.getByLabel("ชื่อกิจการ")).toHaveValue("กลุ่มผ้าทอชุมชน");
   await expect(page.getByAltText("รูปกิจการ 1")).toBeVisible();
+  if (screenshotDir) {
+    await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({ path: `${screenshotDir}/tonphueng-staff-profile-mobile.png`, fullPage: true });
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.screenshot({ path: `${screenshotDir}/tonphueng-staff-profile-desktop.png`, fullPage: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+  }
 
   await page.getByLabel("ชื่อกิจการ").fill("กลุ่มผ้าทอชุมชนรุ่นใหม่");
   const saveResponse = page.waitForResponse((response) => response.url().endsWith("/api/staff/profile"));
@@ -283,6 +299,7 @@ test("Staff can register, wait for Admin approval, edit their own profile, and r
   await page.getByRole("button", { name: "บันทึกข้อมูลกิจการ" }).click();
   expect((await saveResponse).status()).toBe(200);
   expect((await profileReload).status()).toBe(200);
+  await expect(page.getByRole("status")).toContainText("บันทึกข้อมูลกิจการแล้ว");
   await expect(page.getByLabel("ชื่อกิจการ")).toHaveValue("กลุ่มผ้าทอชุมชนรุ่นใหม่");
   await page.reload();
   await expect(page.getByLabel("ชื่อกิจการ")).toHaveValue("กลุ่มผ้าทอชุมชนรุ่นใหม่");
@@ -298,6 +315,7 @@ test("Staff can register, wait for Admin approval, edit their own profile, and r
   const photoSave = page.waitForResponse((response) => response.url().endsWith("/api/staff/profile"));
   await page.getByRole("button", { name: "บันทึกข้อมูลกิจการ" }).click();
   expect((await photoSave).status()).toBe(200);
+  await expect(page.getByLabel("เปลี่ยนรูปกิจการ (ไม่เกิน 19 รูป)")).toHaveValue("");
   await expect(page.getByAltText("รูปกิจการ 1")).toBeVisible();
   await context.addCookies([{ name: "tonphueng_session", value: "customer-seeded-session", url: "http://127.0.0.1:4173" }]);
   await page.goto("/services");
@@ -326,7 +344,7 @@ test("Staff can register, wait for Admin approval, edit their own profile, and r
   await page.getByRole("button", { name: "บันทึกเข้า My Trip" }).click();
   await expect(page.getByRole("status")).toContainText("บันทึกเข้า My Trip แล้ว");
   await page.goto("/my-trip");
-  await expect(page.getByText("สถานที่ที่บันทึกเอง · ยังไม่มีการจองจากแพ็กเกจ")).toBeVisible();
+  await expect(page.getByRole("region", { name: "สถานที่ที่บันทึกเอง" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "กลุ่มผ้าทอชุมชนรุ่นใหม่" })).toBeVisible();
   await page.reload();
   await expect(page.getByRole("heading", { name: "กลุ่มผ้าทอชุมชนรุ่นใหม่" })).toBeVisible();

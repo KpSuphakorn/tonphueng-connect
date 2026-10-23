@@ -4,19 +4,22 @@ import { LogoutButton } from "./login/login-form";
 
 const offers = [
   {
-    number: "01",
+    href: "/packages",
     title: "แพ็กเกจชุมชน",
     description: "เลือกประสบการณ์และเส้นทางเรียนรู้ของบ้านต้นผึ้ง",
+    action: "ดูแพ็กเกจ",
   },
   {
-    number: "02",
+    href: null,
     title: "สินค้าและคำสั่งซื้อ",
-    description: "เลือกดูสินค้าจากผู้ประกอบการในชุมชน",
+    description: "ข้อมูลสินค้าและคำสั่งซื้อจะแสดงเมื่อบริการพร้อมใช้งาน",
+    action: null,
   },
   {
-    number: "03",
+    href: "/services",
     title: "บริการของเรา",
     description: "สำรวจที่พัก ร้านอาหาร และบริการท่องเที่ยว",
+    action: "เลือกดูบริการ",
   },
 ];
 
@@ -36,8 +39,7 @@ export default async function HomePage() {
 
       <section className="hero">
         <div className="hero-content">
-          <p className="welcome-note"><span aria-hidden="true">●</span> เที่ยวชุมชนบ้านต้นผึ้ง จ.เชียงใหม่</p>
-          <p className="eyebrow">TONPHUENG CONNECT</p>
+          <p className="welcome-note">เที่ยวชุมชนบ้านต้นผึ้ง จ.เชียงใหม่</p>
           <h1>รู้จักบ้านต้นผึ้ง<br />ผ่านประสบการณ์ของชุมชน</h1>
           <p className="lead">เลือกชมสินค้าและบริการ วางแผนทริป และติดตามรายการของคุณได้จากที่เดียว</p>
           {!isCustomer && <Link href="/login" className="button button-primary">เริ่มต้นใช้งาน</Link>}
@@ -47,28 +49,22 @@ export default async function HomePage() {
       <section className="section" aria-labelledby="discover-heading">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">เริ่มสำรวจ</p>
             <h2 id="discover-heading">มีอะไรให้เลือกบ้าง</h2>
           </div>
           <p>ข้อมูลจะแสดงเมื่อผู้ดูแลและผู้ประกอบการเพิ่มรายการ</p>
         </div>
         <div className="cards">
-          {offers.map((offer) => offer.number === "01" ? (
-            <Link className="feature-card feature-card-link" href="/packages" key={offer.number}>
-              <span className="feature-mark" aria-hidden="true">{offer.number}</span><span className="feature-card-copy"><span className="feature-card-title">{offer.title}</span><span>{offer.description}</span><span className="availability">ดูแพ็กเกจ</span></span>
-            </Link>
-          ) : offer.number === "03" ? (
-            <Link className="feature-card feature-card-link" href="/services" key={offer.number}>
-              <span className="feature-mark" aria-hidden="true">{offer.number}</span><span className="feature-card-copy"><span className="feature-card-title">{offer.title}</span><span>{offer.description}</span><span className="availability">เลือกดูบริการ</span></span>
+          {offers.map((offer) => offer.href ? (
+            <Link className="feature-card feature-card-link" href={offer.href} key={offer.title}>
+              <span className="feature-card-copy"><span className="feature-card-title">{offer.title}</span><span>{offer.description}</span><span className="availability">{offer.action}</span></span>
             </Link>
           ) : (
-            <details className="feature-card" key={offer.number}>
+            <details className="feature-card" key={offer.title}>
               <summary>
-                <span className="feature-mark" aria-hidden="true">{offer.number}</span>
                 <span className="feature-card-copy">
                   <span className="feature-card-title">{offer.title}</span>
                   <span>{offer.description}</span>
-                  <span className="availability">กำลังเตรียมข้อมูล</span>
+                  <span className="availability">ยังไม่เปิดให้ใช้งาน</span>
                 </span>
               </summary>
               <p className="empty-detail">ยังไม่มีข้อมูลให้เลือกในขณะนี้ โปรดกลับมาตรวจสอบภายหลัง</p>
@@ -79,7 +75,7 @@ export default async function HomePage() {
 
       <section className="section note-card" aria-label="ข้อมูล My Trip">
         <strong>ทริปและรายการของคุณ</strong>
-        <p style={{ margin: "6px 0 0" }}>{isCustomer ? "เปิด My Trip เพื่อดูสถานที่และตัวเลือกแพ็กเกจที่บันทึกไว้ ส่วน My Order ใช้ติดตามคำสั่งซื้อสินค้า" : "เข้าสู่ระบบด้วย LINE เพื่อดู My Trip และ My Order ของคุณ ข้อมูลจะแสดงเมื่อมีรายการบันทึกหรือจองแล้ว"}</p>
+        <p style={{ margin: "6px 0 0" }}>{isCustomer ? "เปิด My Trip เพื่อดูสถานที่และตัวเลือกแพ็กเกจที่บันทึกไว้ ส่วน My Order ยังไม่เปิดให้ใช้งาน" : "เข้าสู่ระบบด้วย LINE เพื่อดู My Trip ส่วน My Order ยังไม่เปิดให้ใช้งาน"}</p>
       </section>
 
       <nav className="bottom-nav" aria-label="เมนูลูกค้า">

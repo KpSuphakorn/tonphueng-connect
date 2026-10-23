@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createHash } from "node:crypto";
 import { GET as adminGet, POST as adminSave } from "../src/app/api/admin/packages/route";
-import { GET as packageList } from "../src/app/api/packages/route";
+import { GET as packageList, OPTIONS as packagesOptions } from "../src/app/api/packages/route";
 import { GET as selectionGet, POST as selectionSave } from "../src/app/api/packages/selection/route";
 
 const admin = { id: "11111111-1111-4111-8111-111111111111", role: "admin", status: "active" };
@@ -100,9 +100,23 @@ describe("Package admin and Customer selection boundaries", () => {
     const response = await packageList();
     const result = await response.json();
     expect(response.status).toBe(200);
+    expect(response.headers.get("access-control-allow-origin")).toBe("*");
     expect(result.categories[0].sub_packages[0].price_per_person_satang).toBe(125050);
     expect(result.categories[0].sub_packages[0].slots[0].options).toEqual([{ id: serviceA.id, name: serviceA.name, category: serviceA.category }]);
     expect(JSON.stringify(result)).not.toMatch(/account_id|auth_user_id|photo_paths|เส้นทางรออนุมัติ/);
+    const preflight = await packagesOptions();
+    expect(preflight.status).toBe(204);
+    expect(preflight.headers.get("access-control-allow-origin")).toBe("*");
+    expect(preflight.headers.get("access-control-allow-methods")).toContain("GET");
+    expect((await selectionGet(req("/api/packages/selection", "customer-session"))).headers.get("access-control-allow-origin")).toBeNull();
+  });
+
+  it("keeps public Package failures readable to cross-origin callers", async () => {
+    installBoundary();
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ message: "upstream unavailable" }, { status: 400 })));
+    const response = await packageList();
+    expect(response.status).toBe(503);
+    expect(response.headers.get("access-control-allow-origin")).toBe("*");
   });
 
   it("saves an Admin catalog revision and rejects a slot whose category or options do not match active Services", async () => {

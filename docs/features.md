@@ -31,7 +31,7 @@ Next.js และ TypeScript แอปเดียว ใช้ Supabase Auth, P
 
 ข้อมูล: `app_accounts` เก็บบทบาท/สถานะ/ตัวตน; `app_sessions` เก็บ session ที่เพิกถอนได้ ตาม [migration 001](../supabase/migrations/202610220001_identity.sql) ซึ่งใช้กับโครงการจริงแล้วผ่าน SQL Editor ไม่ได้บันทึก CLI migration history
 
-สถานะ: production Vercel deploy และ LIFF endpoint/scope ได้รับการตรวจยืนยันแล้ว; การเข้า LINE จริง การผูก Admin และ session ข้ามการเปิดแอปยังรอตรวจรับ การแก้ callback ต่อเนื่องจาก Chrome ภายนอกนี้ยังรอ deploy และทดสอบบนมือถือ ดู [ticket 01](../.scratch/tonphueng-connect/issues/01-role-login.md) และ [ผลทดสอบ](../agent-runs/01-role-login/test-report.md)
+สถานะ: production Vercel/LIFF และ callback fix deploy แล้ว; เจ้าของยืนยัน Customer, Admin binding และ approved Staff login สำเร็จ ยังรอ reopen/logout และ mismatched LINE บนเครื่องจริง ดู [ticket 01](../.scratch/tonphueng-connect/issues/01-role-login.md) และ [ผลทดสอบ](../agent-runs/01-role-login/test-report.md)
 
 ## 02 — สมัครผู้ประกอบการและอนุมัติ
 
@@ -52,7 +52,25 @@ Next.js และ TypeScript แอปเดียว ใช้ Supabase Auth, P
 
 เมื่อยืนยันผลการเขียนไม่ได้ ระบบคืน `verify_required` และรักษาบัญชี/รูปที่อาจบันทึกแล้ว เมื่อ cleanup ก่อนเขียนกิจการล้มเหลว ระบบคืน `cleanup_required` พร้อมเลขอ้างอิง การตรวจสถานะและกู้คืนด้วยผู้ดูแลอยู่ใน [setup](setup.md)
 
-สถานะ: migration 002 และ 004 ใช้กับโครงการจริงแล้ว; ตรวจ private bucket, RLS/grants และ PostgreSQL claim/owner/flow/expiry/quota โดย rollback ข้อมูลทดสอบแล้ว การตรวจรูป/การสมัคร/การแก้โปรไฟล์ผ่าน local HTTP doubles และ browser flow; independent review ผ่าน Standards/Spec แต่ real Auth/Storage, CORS, hosted Vercel และ LINE acceptance ยัง pending. Upload preparation is rate-limited to 25 anonymous registration sessions per two hours globally and 5 per Staff account per two hours; expired staging is cleaned in bounded batches only when a later upload is prepared. See [ticket 02](../.scratch/tonphueng-connect/issues/02-staff-approval.md), [setup and recovery guidance](setup.md), and [validation report](../agent-runs/02-staff-approval/test-report.md).
+สถานะ: migration 002 และ 004 ใช้กับโครงการจริงแล้ว; ตรวจ private bucket, RLS/grants และ PostgreSQL claim/owner/flow/expiry/quota โดย rollback ข้อมูลทดสอบแล้ว เจ้าของยืนยันสมัคร/อนุมัติ/Staff login บนระบบจริงสำเร็จ การตรวจรูปและแก้โปรไฟล์ผ่าน local HTTP doubles และ browser flow; ยังรอแก้โปรไฟล์/เปลี่ยนรูปแล้วเปิดใหม่บนมือถือจริง. Upload preparation is rate-limited to 25 anonymous registration sessions per two hours globally and 5 per Staff account per two hours; expired staging is cleaned in bounded batches only when a later upload is prepared. See [ticket 02](../.scratch/tonphueng-connect/issues/02-staff-approval.md), [setup and recovery guidance](setup.md), and [validation report](../agent-runs/02-staff-approval/test-report.md).
+
+## 03 — ค้นหาบริการและ Service List API
+
+`/services` กรองหมวด เลื่อนโหลดต่อเนื่อง และเรียงระยะเส้นตรงเมื่ออนุญาต GPS; รายละเอียดมีรูปสไลด์ คำอธิบาย และเปิด Google Maps ได้ Customer บันทึก/ลบสถานที่ส่วนตัวใน My Trip โดยไม่สร้าง Booking แสดงเฉพาะกิจการของ Staff ที่ active เท่านั้น
+
+`GET /api/services` เป็น API สาธารณะสำหรับ storypage: หมวดและตัวอย่างคำขออยู่ใน [setup](setup.md#public-api-for-storypage) ส่ง `{ services, hasMore, limit }` ครั้งละ 12 รายการ รองรับ offset และพิกัด GPS รูปเป็น signed URL อายุหนึ่งชั่วโมง หมวด `community_product` คือข้อมูลกิจการสินค้าชุมชน ไม่ใช่ Product รายชิ้นของ Ticket 06
+
+รอบ local นี้เพิ่ม CORS `Access-Control-Allow-Origin: *` เฉพาะ GET/OPTIONS ของ `/api/services` และ `/api/packages` รวม error responses ไม่ใช้ credentials และไม่เปลี่ยนสิทธิ์ API ส่วนตัว ต้อง release ก่อน storypage จะเรียกข้ามเว็บได้ GPS sort ปัจจุบันอ่านรายการที่กรองก่อนเรียง/แบ่งหน้า หากข้อมูลโตมากค่อยย้ายการเรียงเข้า PostgreSQL
+
+Migration 003 ใช้กับ Supabase แล้ว; production GET ตอบ 200 ส่วน Staff edit -> Customer -> My Trip ผ่าน LINE จริงยังรอตรวจ ดู [Ticket 03](../.scratch/tonphueng-connect/issues/03-service-discovery.md) และ [ผลทดสอบ](../agent-runs/03-service-discovery/test-report.md)
+
+## 04 — จัดแพ็กเกจและเลือกบริการ
+
+Admin จัดสามหมวด Package, Sub Package และ slot ตามชนิด/จำนวนบริการ Customer เลือกบริการที่ตรงเงื่อนไขและบันทึก/เปิดตัวเลือกเดิมได้ Server ตรวจ revision/สิทธิ์/ตัวเลือกและราคา ราคาต่อคนเดโมที่ Admin กำหนดเก็บเป็น integer satang การเลือกอย่างเดียวยังไม่สร้าง Booking
+
+ช่องบังคับของ Package/Sub Package/slot แสดง `*` และคำอธิบาย ช่องราคา ระยะเวลา และจำนวนเก็บข้อความระหว่างพิมพ์เพื่อให้ลบจนว่างได้ตามปกติ ตรวจค่าตอนบันทึก โดยไม่เปลี่ยนกฎราคา/จำนวนเดิม
+
+Migration 005 ใช้กับ Supabase แล้ว; SQL ราคา/ตัวเลือก/revision probes ผ่านและ rollback ข้อมูลทดสอบ ยังรอ Admin จัดแพ็กเกจ -> Customer เลือกจริงบน LINE ดู [Ticket 04](../.scratch/tonphueng-connect/issues/04-package-selection.md) และ [ผลทดสอบ](../agent-runs/04-package-selection/test-report.md)
 
 ## 05 — Package Booking และ My Trip
 
@@ -64,12 +82,15 @@ Customer เลือกวันเริ่มและผู้เข้า�
 
 สถานะ: local checks pass; migration 006 was applied to the connected Supabase project on 2026-10-23. Real SQL probes passed with all probe writes rolled back, and PostgREST table/RPC access was verified. Hosted Customer/LINE booking acceptance remains pending. See [Ticket 05](../.scratch/tonphueng-connect/issues/05-package-booking.md) and its [test report](../agent-runs/05-package-booking/test-report.md).
 
+## UI และสถานะงาน
+
+รอบ local นี้ปรับ UI ทั้งแอปผ่าน shared styles: พื้นขาว เส้นแบ่ง ลดการ์ดซ้อน/เงา/ของตกแต่ง คงสีเขียวของผึ้งพาเดิน ช่องกรอกเหมาะกับมือถือและมี focus ชัด หน้าแรกเชื่อมงานที่ทำได้จริง พร้อมระบุสินค้า/Order ที่ยังไม่เปิด Staff บันทึกโปรไฟล์แล้วเห็นผลสำเร็จต่อเนื่องพร้อมข้อมูลที่ refresh
+
+Tickets 01–05 พัฒนาและทดสอบแล้ว (ดู checkboxes ใน ticket เดิม); live checks ที่ยังค้างแยกไว้แต่ละใบ รอบ UI/CORS/ช่องตัวเลขผ่าน typecheck, unit 42/42, browser 13/13, targeted Staff flow หลังแก้ล้างไฟล์ 1/1 และ production build ตรวจภาพมือถือ/เดสก์ท็อปแล้ว Impeccable detector ไม่พบรายการเตือน งานรอบนี้ยังไม่ commit/push/deploy
+
 ## งานที่ยังไม่พัฒนา
 
 งานหลักที่เหลือคือ Tickets 06–08: สินค้า/Order และเชิญ Admin ส่วน Ticket 09 (AI chat) และ 10 (Feedback) เป็น optional ทำเมื่อมีเวลา Tickets 04–05 ใช้ migrations 005–006 กับ Supabase จริงแล้ว และรอ hosted workflow acceptance ตามรายงาน รายละเอียดอยู่ใน [tickets เดิม](../.scratch/tonphueng-connect/issues/)
 
-Ticket 04 is implemented locally: Admin can edit the three Package categories and typed Sub Package slots; Customers can browse, choose eligible active Staff services, and save/reload a selection. The demo price is an Admin-entered per-person amount in integer satang; this ticket records a selection only and does not create a Booking or take payment. The package catalogue and selection use migration 005, applied to the connected project on 2026-10-23. PostgreSQL RLS/grants and RPC probes passed with probe data rolled back; application HTTP/browser checks use loopback doubles, and live Admin/Customer workflow acceptance remains pending. See the [Ticket 04 report](../agent-runs/04-package-selection/test-report.md).
-
-Ticket 03 เพิ่ม `GET /api/services?category=...` พร้อม filter, offset pagination, optional GPS distance ordering, detail/gallery, and customer-owned My Trip saves. Omitting `category` shows all categories; an invalid supplied value returns 400. List and detail expose only services owned by active Staff. GPS ordering loads the filtered catalogue before slicing so each page follows one global distance order; move this sort into Postgres if the catalogue grows substantially. Migration 003 adds the Service description and private saved-service relation; it was applied to the connected Supabase project on 2026-10-23 with schema and access checks verified. Live application acceptance remains pending. Local checks and remaining acceptance are recorded in the [Ticket 03 report](../agent-runs/03-service-discovery/test-report.md).
 
 ข้อมูลธุรกิจที่ยังขาดใช้ข้อมูลเดโมที่ระบุชัดเจนได้ ระบบบันทึกและตรวจสิทธิ์ยังทำงานจริง การตั้งค่า/การอนุญาตบริการภายนอกยังค้างตาม [ตารางของ spec](../.scratch/tonphueng-connect/spec.md#ข้อมูลและการตั้งค่าที่ยังรอ)

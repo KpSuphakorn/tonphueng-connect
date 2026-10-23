@@ -78,6 +78,8 @@ export default async function HomePage() {
         <p style={{ margin: "6px 0 0" }}>{isCustomer ? "เปิด My Trip เพื่อดูสถานที่และตัวเลือกแพ็กเกจที่บันทึกไว้ ส่วน My Order จะแสดงคำสั่งซื้อเมื่อเปิดใช้งาน" : "เข้าสู่ระบบด้วย LINE เพื่อดู My Trip และ My Order ของบัญชีคุณ"}</p>
       </section>
 
+      <p style={{ margin: "24px 0 0", color: "var(--muted)", fontSize: 13 }}><Link href="/credits" style={{ textDecoration: "underline", textUnderlineOffset: 3 }}>เครดิตภาพ</Link></p>
+
       <nav className="bottom-nav" aria-label="เมนูลูกค้า">
         <Link href="/" aria-current="page">หน้าหลัก</Link>
         <Link href="/my-trip">My Trip</Link>

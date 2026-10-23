@@ -12,7 +12,7 @@ import { STAFF_PHOTO_BUCKET, validatePhotoBuffers } from "../src/lib/staff";
 import { createServiceClient } from "../src/lib/supabase";
 import {
   DEMO_AUTH_MARKER, DEMO_BOUNDS, DEMO_PACKAGES, DEMO_SERVICES, PACKAGE_PRICE_RANGE_SATANG, PHOTO_CREDITS,
-  PRODUCT_PRICE_RANGE_SATANG, photoCreditLine, type DemoPackageCategory, type DemoService, type DemoServiceCategory,
+  PRODUCT_PRICE_RANGE_SATANG, type DemoPackageCategory, type DemoService, type DemoServiceCategory,
 } from "./demo-data/catalog";
 
 export const PHOTO_DIR = path.resolve(process.cwd(), "scripts/demo-data/photos");
@@ -55,7 +55,6 @@ export function validateCatalog(): string[] {
     if (!new RegExp(`^demo-${service.category}-[1-3]@example\\.com$`).test(service.email)) problems.push(`${where}: unexpected email ${service.email}`);
     if (!service.name.trim() || service.name.length > 160) problems.push(`${where}: name must be 1–160 characters`);
     if (service.description.length > 4000) problems.push(`${where}: description longer than 4000 characters`);
-    if (!service.description.endsWith(photoCreditLine(service.photos))) problems.push(`${where}: description must end with the photo credit line`);
     if (!service.address.trim() || service.address.length > 1000) problems.push(`${where}: address must be 1–1000 characters`);
     if (!service.phone.trim() || service.phone.length > 40) problems.push(`${where}: phone must be 1–40 characters`);
     if (service.latitude < DEMO_BOUNDS.minLatitude || service.latitude > DEMO_BOUNDS.maxLatitude ||
@@ -69,7 +68,7 @@ export function validateCatalog(): string[] {
       if (!UUID.test(product.id)) problems.push(`${at}: invalid id`);
       unique(product.id, "id");
       if (!product.name.trim() || product.name.length > 160) problems.push(`${at}: name must be 1–160 characters`);
-      if (product.description.length > 4000 || !product.description.endsWith(photoCreditLine([product.photo]))) problems.push(`${at}: description too long or missing photo credit line`);
+      if (product.description.length > 4000) problems.push(`${at}: description longer than 4000 characters`);
       if (!Number.isSafeInteger(product.price_satang) || product.price_satang < PRODUCT_PRICE_RANGE_SATANG.min || product.price_satang > PRODUCT_PRICE_RANGE_SATANG.max) {
         problems.push(`${at}: price ${product.price_satang} satang outside the demo range`);
       }

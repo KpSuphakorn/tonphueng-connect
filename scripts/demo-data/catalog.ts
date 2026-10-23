@@ -2,7 +2,7 @@
 // Every name, address, phone, price, package and coordinate here is invented demo data, not a
 // real offer, agreement, price list or route permission. By owner decision the visible text does
 // not say "demo"; seeded records are identified by their demo-…@example.com accounts and fixed ids.
-// Photos come from Wikimedia Commons; attribution is appended to each description from PHOTO_CREDITS.
+// Photos come from Wikimedia Commons; PHOTO_CREDITS is their single attribution source, shown on /credits.
 import type { PackageCategory } from "../../src/lib/packages";
 
 export type DemoServiceCategory = "community_product" | "accommodation" | "restaurant" | "tourism_trail";
@@ -97,22 +97,6 @@ export const PHOTO_CREDITS: PhotoCredit[] = [
   { file: "product-community_product-3-3.jpg", subject: "Dried green tea leaves", author: "Romain Guy from Lyon, France", license: "CC BY-SA 2.0", license_url: "https://creativecommons.org/licenses/by-sa/2.0", source_page_url: "https://commons.wikimedia.org/wiki/File:Dried_tea_leaves,_Longjin.jpg" },
 ];
 
-const creditByFile = new Map(PHOTO_CREDITS.map((credit) => [credit.file, credit]));
-
-/** The mandatory photo attribution line appended to every seeded description. */
-export function photoCreditLine(files: string[]) {
-  const credits = files.map((file) => {
-    const credit = creditByFile.get(file);
-    if (!credit) throw new Error(`Missing photo credit for ${file}`);
-    return credit;
-  });
-  const parts = [...new Set(credits.map((credit) => `${credit.author} (${credit.license})`))];
-  if (parts.length === 1) return `ภาพ: ${credits[0].author} / Wikimedia Commons (${credits[0].license})`;
-  return `ภาพ: ${parts.join(", ")} / Wikimedia Commons`;
-}
-
-const withCredit = (text: string, files: string[]) => `${text}\n\n${photoCreditLine(files)}`;
-
 // Fixed UUIDs (version 4 / variant 8 layout, accepted by the app validators).
 const id = (group: string, n: number) => `d3e0c0de-5eed-4000-8000-${group}${String(n).padStart(4, "0")}`;
 const serviceId = (n: number) => id("00000001", n);
@@ -136,7 +120,7 @@ function service(input: ServiceInput): DemoService {
     category: input.category,
     email: `demo-${input.category}-${input.n}@${DEMO_EMAIL_DOMAIN}`,
     name: input.name,
-    description: withCredit(input.description, photos),
+    description: input.description,
     address: input.address,
     latitude: input.latitude,
     longitude: input.longitude,
@@ -144,7 +128,7 @@ function service(input: ServiceInput): DemoService {
     photos,
     products: (input.products ?? []).map((product, index) => {
       const photo = `product-${key}-${index + 1}.jpg`;
-      return { ...product, photo, description: withCredit(product.description, [photo]) };
+      return { ...product, photo };
     }),
   };
 }

@@ -37,8 +37,8 @@ Next.js และ TypeScript แอปเดียว ใช้ Supabase Auth, P
 
 | หน้า/endpoint | การทำงานที่มีแล้ว |
 | --- | --- |
-| `/staff/register`, `POST /api/staff/register` | สมัครด้วยข้อมูลกิจการ พิกัด หมวด โทรศัพท์ รูป อีเมล/รหัสผ่าน; สร้าง Staff สถานะ `pending` และ Service ของบัญชีนั้น |
-| `/admin` | Admin ที่มีสิทธิ์เห็นข้อมูลใบสมัคร อีเมลจาก Auth และรูปส่วนตัว |
+| `/staff/register`, `POST /api/staff/register` | สมัครด้วยข้อมูลกิจการ พิกัด หมวด โทรศัพท์ รูป อีเมล/รหัสผ่าน; ฟอร์มแสดง `* จำเป็นต้องกรอก` สำหรับทุกช่องที่ต้องกรอก; สร้าง Staff สถานะ `pending` และ Service ของบัญชีนั้น |
+| `/admin` | Admin ที่มีสิทธิ์เห็นข้อมูลใบสมัคร อีเมลจาก Auth และรูปส่วนตัว; query ระบุ foreign key `services_account_id_fkey` เพื่อ join Service ให้ชัดเจน |
 | `POST /api/admin/staff/[accountId]/approve` | ตรวจ Admin บน server และเปลี่ยน Staff จาก `pending` เป็น `active` ผ่าน SQL function; ต้องมี Service แล้ว |
 | `/staff`, `POST /api/staff/profile` | Staff ที่อนุมัติแล้วเปิด/แก้ข้อมูลกิจการของตนได้; เจ้าของข้อมูลอ้างจาก session ฝั่ง server |
 

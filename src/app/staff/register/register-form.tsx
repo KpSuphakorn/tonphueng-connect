@@ -57,21 +57,22 @@ export function RegisterForm() {
   </div>;
 
   return <form className="form-stack" onSubmit={submit}>
-    <label className="field">ชื่อกิจการ<input name="name" required maxLength={160} autoComplete="organization" /></label>
-    <label className="field">ที่อยู่<textarea name="address" required maxLength={1000} autoComplete="street-address" /></label>
+    <p className="form-help"><span className="required-marker" aria-hidden="true">*</span> จำเป็นต้องกรอก</p>
+    <label className="field"><span>ชื่อกิจการ <span className="required-marker" aria-hidden="true">*</span></span><input name="name" required maxLength={160} autoComplete="organization" /></label>
+    <label className="field"><span>ที่อยู่ <span className="required-marker" aria-hidden="true">*</span></span><textarea name="address" required maxLength={1000} autoComplete="street-address" /></label>
     <div className="coordinate-fields">
-      <label className="field">ละติจูด<input name="latitude" type="number" required min={-90} max={90} step="any" inputMode="decimal" /></label>
-      <label className="field">ลองจิจูด<input name="longitude" type="number" required min={-180} max={180} step="any" inputMode="decimal" /></label>
+      <label className="field"><span>ละติจูด <span className="required-marker" aria-hidden="true">*</span></span><input name="latitude" type="number" required min={-90} max={90} step="any" inputMode="decimal" /></label>
+      <label className="field"><span>ลองจิจูด <span className="required-marker" aria-hidden="true">*</span></span><input name="longitude" type="number" required min={-180} max={180} step="any" inputMode="decimal" /></label>
     </div>
-    <label className="field">เบอร์โทรศัพท์<input name="phone" type="tel" required maxLength={40} autoComplete="tel" /></label>
-    <label className="field">ประเภทกิจการ<select name="category" value={category} onChange={(event) => setCategory(event.target.value)}>
+    <label className="field"><span>เบอร์โทรศัพท์ <span className="required-marker" aria-hidden="true">*</span></span><input name="phone" type="tel" required maxLength={40} autoComplete="tel" /></label>
+    <label className="field"><span>ประเภทกิจการ <span className="required-marker" aria-hidden="true">*</span></span><select name="category" required value={category} onChange={(event) => setCategory(event.target.value)}>
       {categories.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
     </select></label>
-    {category === "other" && <label className="field">ระบุประเภทอื่น<input name="other_category" required maxLength={120} /></label>}
-    <label className="field">รูปกิจการ (1–19 รูป)<input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple required /></label>
+    {category === "other" && <label className="field"><span>ระบุประเภทอื่น <span className="required-marker" aria-hidden="true">*</span></span><input name="other_category" required maxLength={120} /></label>}
+    <label className="field"><span>รูปกิจการ (1–19 รูป) <span className="required-marker" aria-hidden="true">*</span></span><input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple required /></label>
     <p className="form-help">รองรับ JPG, PNG หรือ WebP ขนาดไม่เกิน 5 MB ต่อไฟล์ และรวมไม่เกิน 25 MB</p>
-    <label className="field">อีเมล<input name="email" type="email" required maxLength={254} autoComplete="email" /></label>
-    <label className="field">รหัสผ่าน<input name="password" type="password" required minLength={8} maxLength={128} autoComplete="new-password" /></label>
+    <label className="field"><span>อีเมล <span className="required-marker" aria-hidden="true">*</span></span><input name="email" type="email" required maxLength={254} autoComplete="email" /></label>
+    <label className="field"><span>รหัสผ่าน <span className="required-marker" aria-hidden="true">*</span></span><input name="password" type="password" required minLength={8} maxLength={128} autoComplete="new-password" /></label>
     <p className="form-help">รหัสผ่านใช้สำหรับเข้าสู่ระบบและจะไม่แสดงในข้อมูลกิจการ</p>
     <button className="button button-primary button-wide" type="submit" disabled={busy}>{busy ? "กำลังส่งข้อมูล…" : "ส่งข้อมูลสมัคร"}</button>
     {message && <p className="error-message" role="status" aria-live="polite">{message}</p>}

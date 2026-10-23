@@ -76,6 +76,10 @@ const fakeSupabase = createServer(async (request, response) => {
   }
   if (url.pathname === "/rest/v1/app_accounts" && request.method === "GET") {
     if (url.searchParams.get("status") === "eq.pending") {
+      const select = url.searchParams.get("select") ?? "";
+      if (select.includes("services(") && !select.includes("services!services_account_id_fkey(")) {
+        return send(response, 400, { code: "PGRST201", message: "Could not embed because more than one relationship was found for 'app_accounts' and 'services'" });
+      }
       const pending = [...accounts.values()].filter((account) => account.role === "staff" && account.status === "pending").map((account) => ({
         id: account.id,
         auth_user_id: account.auth_user_id,

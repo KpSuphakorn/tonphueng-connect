@@ -52,3 +52,9 @@ A fresh independent review passed Standards and Spec with no blocking findings, 
 Migration 004 was applied from the reviewed local SQL file in the intended project `xewzqzgghdyublpcikgt`, wrapped in `BEGIN`/`COMMIT`, after preflight confirmed its table, bucket, and RPC were absent. Postflight verified: private staging bucket, 5,242,880-byte file limit, session RLS, denied `anon`/`authenticated` table access, denied browser RPC execution, and allowed service-role RPC execution.
 
 Real PostgreSQL probes verified rejection of wrong-owner/wrong-flow claims, acceptance of a valid claim, replay and expired-session rejection, and rejection of the sixth profile session within the quota window. All synthetic sessions were enclosed in a separate transaction and rolled back. No Auth identities, business records, photo objects, or durable probe sessions were created. Proof: `/tmp/tonphueng-migration004-verified.png`. These SQL checks do not establish live Storage/CORS/Auth/LINE or hosted application acceptance.
+
+## Admin applicant relationship ambiguity (2026-10-23)
+
+A read-only check against the connected Supabase project reproduced `PGRST201` for the Admin applicant select because `app_accounts` has more than one relationship to `services`. Specifying `services!services_account_id_fkey(...)` returned the pending applicant and its Service; the existing Auth email and readable photo also resolved. No data was written. The Admin query now uses that explicit relationship while preserving its `services` result key and existing authorization checks.
+
+Validation: the targeted Staff registration → Admin review/approval Playwright flow failed before the fix at the applicant heading, then passed after it (local fake Supabase now returns `PGRST201` for ambiguous selects); `npm run typecheck` and `git diff --check` passed. This is local application evidence plus a read-only query check; hosted Admin acceptance remains pending.

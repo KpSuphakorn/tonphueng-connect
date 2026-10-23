@@ -24,7 +24,7 @@ export default async function AdminPage() {
 
   const client = createServiceClient();
   const { data, error } = await client.from("app_accounts")
-    .select("id,auth_user_id,services(id,account_id,name,address,latitude,longitude,phone,category,other_category,photo_paths)")
+    .select("id,auth_user_id,services!services_account_id_fkey(id,account_id,name,address,latitude,longitude,phone,category,other_category,photo_paths)")
     .eq("role", "staff")
     .eq("status", "pending")
     .order("created_at", { ascending: true });

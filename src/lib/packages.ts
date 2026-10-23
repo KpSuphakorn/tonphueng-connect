@@ -10,7 +10,7 @@ export type PackageCategory = (typeof PACKAGE_CATEGORIES)[number]["id"];
 export const PACKAGE_CATEGORY_IDS = PACKAGE_CATEGORIES.map(({ id }) => id);
 export type PackageService = { id: string; name: string; category: (typeof STAFF_CATEGORIES)[number] };
 export type PackageSlot = { id: string; name: string; service_category: PackageService["category"]; required_count: number; service_ids: string[] };
-export type SubPackage = { id: string; title: string; description: string; price_per_person_satang: number; slots: PackageSlot[] };
+export type SubPackage = { id: string; title: string; description: string; price_per_person_satang: number; duration_days: number; slots: PackageSlot[] };
 export type PackageCatalog = { title: string; description: string; contact_url: string; sub_packages: SubPackage[] };
 export type CatalogRow = { category: PackageCategory; catalog: PackageCatalog; revision: number };
 
@@ -71,6 +71,7 @@ export function validatePackageCatalog(value: unknown): PackageCatalog | null {
       typeof item.title !== "string" || !item.title.trim() || item.title.trim().length > 160 ||
       typeof item.description !== "string" || item.description.length > 4000 ||
       !Number.isSafeInteger(item.price_per_person_satang) || Number(item.price_per_person_satang) < 1 || Number(item.price_per_person_satang) > 100_000_000 ||
+      (item.duration_days !== undefined && (!Number.isSafeInteger(item.duration_days) || Number(item.duration_days) < 1 || Number(item.duration_days) > 30)) ||
       !Array.isArray(item.slots) || item.slots.length < 1 || item.slots.length > 12) return null;
     const slots: PackageSlot[] = [];
     const slotIds = new Set<string>();
@@ -84,7 +85,7 @@ export function validatePackageCatalog(value: unknown): PackageCatalog | null {
       slotIds.add(rawSlot.id);
       slots.push({ id: rawSlot.id, name: rawSlot.name.trim(), service_category: rawSlot.service_category as PackageSlot["service_category"], required_count: Number(rawSlot.required_count), service_ids: rawSlot.service_ids as string[] });
     }
-    subPackages.push({ id: item.id, title: item.title.trim(), description: item.description.trim(), price_per_person_satang: Number(item.price_per_person_satang), slots });
+    subPackages.push({ id: item.id, title: item.title.trim(), description: item.description.trim(), price_per_person_satang: Number(item.price_per_person_satang), duration_days: item.duration_days === undefined ? 1 : Number(item.duration_days), slots });
   }
   if (new Set(subPackages.map((item) => item.id)).size !== subPackages.length) return null;
   return { title: value.title.trim(), description: value.description.trim(), contact_url: contactUrl, sub_packages: subPackages };
@@ -208,5 +209,56 @@ export async function getCustomerPackageSelections(customerId: string) {
     .select("id,category,sub_package_id,catalog_revision,price_per_person_satang,choices,updated_at")
     .eq("customer_account_id", customerId).order("updated_at", { ascending: false });
   if (error) throw new Error("Could not load package selections");
+  return data ?? [];
+}
+
+export type Booking = { id: string; status: "pending" | "paid_simulated"; category: string; sub_package_id: string; package_snapshot: Record<string, unknown>; start_date: string; end_date: string; participants: number; price_per_person_satang: number; total_price_satang: number; created_at: string; confirmed_at: string | null; my_trip_added_at: string | null };
+export function publicBooking(value: Record<string, unknown>): Booking {
+  return Object.fromEntries(["id", "status", "category", "sub_package_id", "package_snapshot", "start_date", "end_date", "participants", "price_per_person_satang", "total_price_satang", "created_at", "confirmed_at", "my_trip_added_at"].map((key) => [key, value[key]])) as Booking;
+}
+
+export async function createPackageBooking(customerId: string, input: { request_id: string; category: PackageCategory; sub_package_id: string; revision: number; choices: Array<{ slot_id: string; service_ids: string[] }>; start_date: string; participants: number }) {
+  const { data, error } = await createServiceClient().rpc("create_package_booking", {
+    target_customer_id: customerId, target_request_id: input.request_id, target_category: input.category,
+    target_sub_package_id: input.sub_package_id, target_revision: input.revision, target_choices: input.choices,
+    target_start_date: input.start_date, target_participants: input.participants,
+  });
+  if (error) throw error;
+  return publicBooking(data as Record<string, unknown>);
+}
+
+export async function listPackageBookings(customerId?: string) {
+  let query = createServiceClient().from("package_bookings").select("id,status,category,sub_package_id,package_snapshot,start_date,end_date,participants,price_per_person_satang,total_price_satang,created_at,confirmed_at,my_trip_added_at").order("created_at", { ascending: false });
+  if (customerId) query = query.eq("customer_account_id", customerId);
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []) as Booking[];
+}
+
+export async function getPackageBooking(bookingId: string, customerId?: string) {
+  let query = createServiceClient().from("package_bookings").select("id,customer_account_id,status,category,sub_package_id,package_snapshot,start_date,end_date,participants,price_per_person_satang,total_price_satang,created_at,confirmed_at,my_trip_added_at").eq("id", bookingId);
+  if (customerId) query = query.eq("customer_account_id", customerId);
+  const { data, error } = await query.maybeSingle();
+  if (error) throw error;
+  return data as (Booking & { customer_account_id: string }) | null;
+}
+
+export async function confirmPackageBooking(customerId: string, bookingId: string) {
+  const { data, error } = await createServiceClient().rpc("confirm_package_booking", { target_customer_id: customerId, target_booking_id: bookingId });
+  if (error) throw error;
+  return publicBooking(data as Record<string, unknown>);
+}
+
+export async function addBookingToMyTrip(customerId: string, bookingId: string) {
+  const { data, error } = await createServiceClient().rpc("add_booking_to_my_trip", { target_customer_id: customerId, target_booking_id: bookingId });
+  if (error) throw error;
+  return publicBooking(data as Record<string, unknown>);
+}
+
+export async function getMyTripBookingServices(customerId: string) {
+  const client = createServiceClient();
+  const { data, error } = await client.from("my_trip_booking_services")
+    .select("booking_id,service_id,service_snapshot,created_at").eq("customer_account_id", customerId).order("created_at", { ascending: false });
+  if (error) throw error;
   return data ?? [];
 }

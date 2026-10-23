@@ -10,7 +10,7 @@ const packageCategories = [
 ] as const;
 
 function newSubPackage(): SubPackage {
-  return { id: crypto.randomUUID(), title: "", description: "", price_per_person_satang: 0, slots: [] };
+  return { id: crypto.randomUUID(), title: "", description: "", price_per_person_satang: 0, duration_days: 1, slots: [] };
 }
 
 function priceInput(satang: number) {
@@ -59,6 +59,7 @@ export function PackageEditor({ initialCatalogs, services }: { initialCatalogs: 
       <label className="field">ชื่อ Sub Package<input maxLength={160} value={subPackage.title} onChange={(event) => updateSub(subIndex, { ...subPackage, title: event.target.value })} required /></label>
       <label className="field">รายละเอียด<textarea maxLength={4000} value={subPackage.description} onChange={(event) => updateSub(subIndex, { ...subPackage, description: event.target.value })} /></label>
       <label className="field">ราคาต่อคน (บาท)<input type="number" inputMode="decimal" min="0.01" max="1000000" step="0.01" value={priceInput(subPackage.price_per_person_satang)} onChange={(event) => updateSub(subIndex, { ...subPackage, price_per_person_satang: priceInSatang(event.target.value) })} required /><small>ระบุราคาตัวอย่างต่อคน; ระบบเก็บเป็นสตางค์จำนวนเต็ม</small></label>
+      <label className="field"><span>ระยะเวลา (วัน) <span className="required-marker" aria-hidden="true">*</span></span><input type="number" min="1" max="30" step="1" value={subPackage.duration_days ?? 1} onChange={(event) => updateSub(subIndex, { ...subPackage, duration_days: Number(event.target.value) })} required /><small>แพ็กเกจเดิมที่ยังไม่ระบุจะใช้ 1 วัน</small></label>
       <div className="package-editor-heading"><h4>ตัวเลือกตาม slot</h4><button className="button button-secondary" type="button" onClick={() => updateSub(subIndex, { ...subPackage, slots: [...subPackage.slots, { id: crypto.randomUUID(), name: "", service_category: "tourism_trail", required_count: 1, service_ids: [] }] })}>เพิ่ม slot</button></div>
       {subPackage.slots.map((slot, slotIndex) => <SlotEditor key={slot.id} slot={slot} services={services} onChange={(next) => updateSub(subIndex, { ...subPackage, slots: subPackage.slots.map((item, index) => index === slotIndex ? next : item) })} onRemove={() => updateSub(subIndex, { ...subPackage, slots: subPackage.slots.filter((_, index) => index !== slotIndex) })} />)}
     </article>)}

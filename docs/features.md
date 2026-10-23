@@ -54,9 +54,19 @@ Next.js และ TypeScript แอปเดียว ใช้ Supabase Auth, P
 
 สถานะ: migration 002 และ 004 ใช้กับโครงการจริงแล้ว; ตรวจ private bucket, RLS/grants และ PostgreSQL claim/owner/flow/expiry/quota โดย rollback ข้อมูลทดสอบแล้ว การตรวจรูป/การสมัคร/การแก้โปรไฟล์ผ่าน local HTTP doubles และ browser flow; independent review ผ่าน Standards/Spec แต่ real Auth/Storage, CORS, hosted Vercel และ LINE acceptance ยัง pending. Upload preparation is rate-limited to 25 anonymous registration sessions per two hours globally and 5 per Staff account per two hours; expired staging is cleaned in bounded batches only when a later upload is prepared. See [ticket 02](../.scratch/tonphueng-connect/issues/02-staff-approval.md), [setup and recovery guidance](setup.md), and [validation report](../agent-runs/02-staff-approval/test-report.md).
 
+## 05 — Package Booking และ My Trip
+
+Customer เลือกวันเริ่มและผู้เข้าร่วมได้หลังเลือกบริการครบ ระบบตรวจ revision/บริการ/ราคาใน PostgreSQL แล้วคำนวณยอดจากราคาต่อคนที่ Admin ตั้งไว้; ระยะเวลาแพ็กเกจ 1–30 วันกำหนดวันสิ้นสุดบน server และข้อมูลเดิมที่ไม่มีระยะเวลาใช้ 1 วัน Booking เก็บ snapshot ของแพ็กเกจและบริการ พร้อมวันเริ่ม/สิ้นสุดและยอดเพื่อให้รายการเดิมอ่านได้หลังแก้ Catalogue
+
+การชำระเงินเป็นการจำลองเท่านั้น: หน้า Booking แสดงตัวอย่าง QR ที่ใช้จ่ายเงินจริงไม่ได้และต้องให้ Customer ยืนยันแยกต่างหาก ไม่มีผู้ให้บริการชำระเงินหรือการตรวจยอดธนาคาร การสร้างรายการใช้ request UUID เพื่อ replay ซ้ำได้โดยไม่สร้าง Booking ซ้ำ การยืนยันและเพิ่มสถานที่เข้า My Trip ทำแบบ idempotent; สถานที่จาก Booking อยู่คนละตารางกับที่ Customer บันทึกเอง
+
+จุดเข้า: `/packages/[subPackageId]`, `/bookings/[bookingId]`, `/my-trip`, `/admin/bookings`, `POST /api/bookings`, `POST /api/bookings/[bookingId]/confirm`, `POST /api/bookings/[bookingId]/my-trip` โค้ดหลัก: [`packages.ts`](../src/lib/packages.ts) และ migration [006](../supabase/migrations/202610230006_package_bookings.sql)
+
+สถานะ: local checks pass; migration 006 was applied to the connected Supabase project on 2026-10-23. Real SQL probes passed with all probe writes rolled back, and PostgREST table/RPC access was verified. Hosted Customer/LINE booking acceptance remains pending. See [Ticket 05](../.scratch/tonphueng-connect/issues/05-package-booking.md) and its [test report](../agent-runs/05-package-booking/test-report.md).
+
 ## งานที่ยังไม่พัฒนา
 
-งานหลักที่เหลือคือ Tickets 05–08: Booking, สินค้า/Order และเชิญ Admin ส่วน Ticket 09 (AI chat) และ 10 (Feedback) เป็น optional ทำเมื่อมีเวลา Ticket 04 ใช้ migration 005 กับ Supabase จริงแล้ว และรอ hosted workflow acceptance ตามรายงาน รายละเอียดอยู่ใน [tickets เดิม](../.scratch/tonphueng-connect/issues/)
+งานหลักที่เหลือคือ Tickets 06–08: สินค้า/Order และเชิญ Admin ส่วน Ticket 09 (AI chat) และ 10 (Feedback) เป็น optional ทำเมื่อมีเวลา Tickets 04–05 ใช้ migrations 005–006 กับ Supabase จริงแล้ว และรอ hosted workflow acceptance ตามรายงาน รายละเอียดอยู่ใน [tickets เดิม](../.scratch/tonphueng-connect/issues/)
 
 Ticket 04 is implemented locally: Admin can edit the three Package categories and typed Sub Package slots; Customers can browse, choose eligible active Staff services, and save/reload a selection. The demo price is an Admin-entered per-person amount in integer satang; this ticket records a selection only and does not create a Booking or take payment. The package catalogue and selection use migration 005, applied to the connected project on 2026-10-23. PostgreSQL RLS/grants and RPC probes passed with probe data rolled back; application HTTP/browser checks use loopback doubles, and live Admin/Customer workflow acceptance remains pending. See the [Ticket 04 report](../agent-runs/04-package-selection/test-report.md).
 
